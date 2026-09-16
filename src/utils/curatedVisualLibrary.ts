@@ -1,4 +1,4 @@
-import { VisualLibraryItem, WorksheetVisual } from '../types/worksheetVisuals';
+import { VisualLibraryItem, WorksheetVisual, VisualStyle } from '../types/worksheetVisuals';
 
 /**
  * Handcrafted, clean, infinitely scalable educational SVGs.
@@ -380,6 +380,188 @@ export const CURATED_VISUAL_LIBRARY: VisualLibraryItem[] = [
       <ellipse cx="330" cy="170" rx="30" ry="25" fill="#ffedd5" stroke="#ea580c" />
       <ellipse cx="330" cy="135" rx="22" ry="18" fill="#ffedd5" stroke="#ea580c" />
     </svg>`,
+  },
+
+  // 9. Pollution, Recycling & Eco-Protection
+  {
+    id: 'pollution_recycling_green',
+    title: 'Pollution, Waste & Recycling',
+    category: 'Pollution & Environment',
+    tags: ['pollution', 'environment', 'recycling', 'waste', 'plastic', 'smog', 'climate', 'green', 'eco', 'carbon', 'nature'],
+    defaultCaption: 'Figure 1: Target Vocabulary — Environmental protection, recycling, and anti-pollution habits',
+    svgLineArt: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="205" x2="380" y2="205" stroke-width="3" />
+      <!-- Factory Chimney on Left -->
+      <rect x="50" y="130" width="40" height="75" />
+      <polygon points="45,130 95,130 90,110 50,110" />
+      <path d="M70 100 Q60 80 80 65 Q100 50 85 30" stroke-dasharray="3 3" />
+      <!-- Big Recycling Bin in Center -->
+      <path d="M160 110 L170 195 C170 200 230 200 230 195 L240 110 Z" />
+      <rect x="150" y="98" width="100" height="12" rx="3" />
+      <!-- Recycling Symbol -->
+      <path d="M190 140 L200 130 L210 140" stroke-width="2" />
+      <path d="M210 155 L215 165 L200 168" stroke-width="2" />
+      <path d="M185 160 L180 150 L192 152" stroke-width="2" />
+      <!-- Sprout / Clean Green Leaf on Right -->
+      <path d="M310 205 Q310 140 340 120" stroke-width="3" />
+      <path d="M340 120 C320 120 310 135 320 150 C330 140 340 130 340 120 Z" />
+      <path d="M310 160 C290 155 285 170 295 180 C305 175 310 165 310 160 Z" />
+    </svg>`,
+    svgVectorAccent: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="400" height="240" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" />
+      <line x1="30" y1="205" x2="370" y2="205" stroke="#16a34a" stroke-width="3" />
+      <!-- Recycling Bin in Emerald Green -->
+      <path d="M160 110 L170 195 C170 200 230 200 230 195 L240 110 Z" fill="#dcfce7" stroke="#16a34a" />
+      <rect x="150" y="98" width="100" height="12" rx="3" fill="#86efac" stroke="#15803d" />
+      <!-- Sprout in vibrant leaf green -->
+      <path d="M310 205 Q310 140 340 120" stroke="#15803d" stroke-width="3" />
+      <path d="M340 120 C320 120 310 135 320 150 C330 140 340 130 340 120 Z" fill="#4ade80" stroke="#15803d" />
+      <path d="M310 160 C290 155 285 170 295 180 C305 175 310 165 310 160 Z" fill="#86efac" stroke="#15803d" />
+    </svg>`,
+  },
+
+  // 10. Accommodations & Hotels
+  {
+    id: 'accommodations_hotel_stay',
+    title: 'Accommodations, Hotel & Reception',
+    category: 'Accommodations & Hotels',
+    tags: ['accommodations', 'hotel', 'hostel', 'booking', 'check-in', 'room', 'reception', 'lodging', 'resort', 'stay'],
+    defaultCaption: 'Figure 1: Target Vocabulary — Hotel amenities, reservations, and room check-in',
+    svgLineArt: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="205" x2="380" y2="205" stroke-width="3" />
+      <!-- Hotel Building on Left -->
+      <rect x="50" y="60" width="100" height="145" rx="4" />
+      <line x1="50" y1="90" x2="150" y2="90" />
+      <rect x="65" y="105" width="20" height="20" />
+      <rect x="115" y="105" width="20" height="20" />
+      <rect x="65" y="140" width="20" height="20" />
+      <rect x="115" y="140" width="20" height="20" />
+      <rect x="90" y="175" width="20" height="30" />
+      <!-- Bed & Room Key on Right -->
+      <rect x="210" y="130" width="130" height="60" rx="6" />
+      <path d="M200 110 V190 M350 150 V190" stroke-width="3" />
+      <rect x="220" y="140" width="30" height="20" rx="3" />
+      <!-- Key Card -->
+      <rect x="250" y="60" width="60" height="40" rx="5" transform="rotate(-10 250 60)" />
+      <circle cx="295" cy="72" r="4" />
+    </svg>`,
+    svgVectorAccent: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="400" height="240" rx="12" fill="#fffbeb" stroke="#fef3c7" stroke-width="1.5" />
+      <rect x="50" y="60" width="100" height="145" rx="4" fill="#fef3c7" stroke="#d97706" />
+      <rect x="210" y="130" width="130" height="60" rx="6" fill="#e0f2fe" stroke="#0284c7" />
+      <rect x="220" y="140" width="30" height="20" rx="3" fill="#ffffff" stroke="#0284c7" />
+      <rect x="250" y="60" width="60" height="40" rx="5" transform="rotate(-10 250 60)" fill="#fed7aa" stroke="#ea580c" />
+    </svg>`,
+  },
+
+  // 11. Celebrations & Festivals
+  {
+    id: 'celebrations_parties_festivals',
+    title: 'Celebrations, Parties & Festivals',
+    category: 'Celebrations & Festivals',
+    tags: ['celebrations', 'festival', 'party', 'birthday', 'holiday', 'balloons', 'cake', 'tradition', 'carnival', 'cheering'],
+    defaultCaption: 'Figure 1: Target Vocabulary — Festive customs, gift-giving, and milestone celebrations',
+    svgLineArt: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="205" x2="380" y2="205" stroke-width="3" />
+      <!-- Birthday Cake in center -->
+      <rect x="140" y="130" width="120" height="70" rx="6" />
+      <path d="M140 150 Q160 160 180 150 Q200 160 220 150 Q240 160 260 150" />
+      <!-- Candles -->
+      <line x1="170" y1="130" x2="170" y2="105" stroke-width="2.5" />
+      <circle cx="170" cy="98" r="4" />
+      <line x1="200" y1="130" x2="200" y2="100" stroke-width="2.5" />
+      <circle cx="200" cy="93" r="4" />
+      <line x1="230" y1="130" x2="230" y2="105" stroke-width="2.5" />
+      <circle cx="230" cy="98" r="4" />
+      <!-- Balloons on Left -->
+      <circle cx="75" cy="80" r="25" />
+      <path d="M75 105 L70 205" stroke-dasharray="2 2" />
+      <circle cx="105" cy="65" r="22" />
+      <path d="M105 87 L75 205" stroke-dasharray="2 2" />
+      <!-- Gift Box on Right -->
+      <rect x="290" y="140" width="60" height="60" rx="4" />
+      <line x1="320" y1="140" x2="320" y2="200" stroke-width="2" />
+      <line x1="290" y1="170" x2="350" y2="170" stroke-width="2" />
+      <path d="M305 130 Q320 115 320 140 Q320 115 335 130" stroke-width="2" />
+    </svg>`,
+    svgVectorAccent: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="400" height="240" rx="12" fill="#faf5ff" stroke="#f3e8ff" stroke-width="1.5" />
+      <rect x="140" y="130" width="120" height="70" rx="6" fill="#fdf4ff" stroke="#c026d3" />
+      <circle cx="75" cy="80" r="25" fill="#fbcfe8" stroke="#db2777" />
+      <circle cx="105" cy="65" r="22" fill="#fed7aa" stroke="#ea580c" />
+      <rect x="290" y="140" width="60" height="60" rx="4" fill="#e0e7ff" stroke="#4f46e5" />
+    </svg>`,
+  },
+
+  // 12. Family Relationships & Generations
+  {
+    id: 'family_relationships_home',
+    title: 'Family, Generations & Relatives',
+    category: 'Family Relationships',
+    tags: ['family', 'relatives', 'parents', 'siblings', 'generations', 'children', 'grandparents', 'kinship', 'bonds', 'home'],
+    defaultCaption: 'Figure 1: Target Vocabulary — Kinship bonds, family traditions, and generational values',
+    svgLineArt: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="205" x2="380" y2="205" stroke-width="3" />
+      <!-- Parent Left -->
+      <circle cx="130" cy="80" r="18" />
+      <path d="M105 170 C105 125 155 125 155 170" />
+      <!-- Parent Right -->
+      <circle cx="270" cy="80" r="18" />
+      <path d="M245 170 C245 125 295 125 295 170" />
+      <!-- Child Center -->
+      <circle cx="200" cy="115" r="14" />
+      <path d="M180 185 C180 150 220 150 220 185" />
+      <!-- Holding Hands -->
+      <line x1="145" y1="140" x2="185" y2="155" stroke-width="2.5" />
+      <line x1="215" y1="155" x2="255" y2="140" stroke-width="2.5" />
+      <!-- Heart Above Family -->
+      <path d="M200 65 C190 50 175 55 175 70 C175 85 200 95 200 95 C200 95 225 85 225 70 C225 55 210 50 200 65 Z" stroke-width="2" />
+    </svg>`,
+    svgVectorAccent: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="400" height="240" rx="12" fill="#ecfeff" stroke="#cffafe" stroke-width="1.5" />
+      <circle cx="130" cy="80" r="18" fill="#e0f2fe" stroke="#0284c7" />
+      <path d="M105 170 C105 125 155 125 155 170 Z" fill="#bae6fd" stroke="#0284c7" />
+      <circle cx="270" cy="80" r="18" fill="#fce7f3" stroke="#db2777" />
+      <path d="M245 170 C245 125 295 125 295 170 Z" fill="#fbcfe8" stroke="#db2777" />
+      <circle cx="200" cy="115" r="14" fill="#fef3c7" stroke="#d97706" />
+      <path d="M180 185 C180 150 220 150 220 185 Z" fill="#fed7aa" stroke="#d97706" />
+      <path d="M200 65 C190 50 175 55 175 70 C175 85 200 95 200 95 C200 95 225 85 225 70 C225 55 210 50 200 65 Z" fill="#fda4af" stroke="#e11d48" />
+    </svg>`,
+  },
+
+  // 13. Friendships & Social Connections
+  {
+    id: 'friendships_social_life',
+    title: 'Friendship, Trust & Socializing',
+    category: 'Friendships & Social Life',
+    tags: ['friendship', 'friends', 'social', 'trust', 'camaraderie', 'teamwork', 'communication', 'people', 'chat'],
+    defaultCaption: 'Figure 1: Target Vocabulary — Social interaction, active listening, and trustworthy friends',
+    svgLineArt: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="20" y1="205" x2="380" y2="205" stroke-width="3" />
+      <!-- Two Friends High-Fiving -->
+      <circle cx="110" cy="90" r="20" />
+      <path d="M80 190 C80 140 140 140 140 190" />
+      <circle cx="290" cy="90" r="20" />
+      <path d="M260 190 C260 140 320 140 320 190" />
+      <!-- Raised High-Five Arms -->
+      <path d="M130 145 L190 95 L200 100" stroke-width="3" />
+      <path d="M270 145 L210 95 L200 100" stroke-width="3" />
+      <!-- Speech Bubbles -->
+      <rect x="140" y="40" width="50" height="30" rx="6" />
+      <rect x="210" y="30" width="55" height="32" rx="6" />
+      <circle cx="155" cy="55" r="2" fill="#1e293b" />
+      <circle cx="165" cy="55" r="2" fill="#1e293b" />
+      <circle cx="175" cy="55" r="2" fill="#1e293b" />
+    </svg>`,
+    svgVectorAccent: `<svg viewBox="0 0 400 240" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="400" height="240" rx="12" fill="#f0fdfa" stroke="#ccfbf1" stroke-width="1.5" />
+      <circle cx="110" cy="90" r="20" fill="#d1fae5" stroke="#059669" />
+      <path d="M80 190 C80 140 140 140 140 190 Z" fill="#a7f3d0" stroke="#059669" />
+      <circle cx="290" cy="90" r="20" fill="#e0f2fe" stroke="#0284c7" />
+      <path d="M260 190 C260 140 320 140 320 190 Z" fill="#bae6fd" stroke="#0284c7" />
+      <rect x="140" y="40" width="50" height="30" rx="6" fill="#fef3c7" stroke="#d97706" />
+      <rect x="210" y="30" width="55" height="32" rx="6" fill="#f3e8ff" stroke="#7e22ce" />
+    </svg>`,
   }
 ];
 
@@ -462,13 +644,52 @@ export const VISUAL_MATCHING_BANKS: Record<string, { letter: string; label: stri
         <circle cx="82" cy="50" r="4" fill="#ffffff" />
       </svg>`
     }
+  ],
+
+  environment: [
+    {
+      letter: 'A',
+      label: 'Recycle Bin',
+      svg: `<svg viewBox="0 0 100 100" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 35 L38 80 C38 85 62 85 62 80 L70 35 Z" fill="#dcfce7" />
+        <rect x="25" y="28" width="50" height="8" rx="2" fill="#86efac" />
+      </svg>`
+    },
+    {
+      letter: 'B',
+      label: 'Solar Panel',
+      svg: `<svg viewBox="0 0 100 100" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="20,70 80,70 70,30 30,30" fill="#e0f2fe" />
+        <line x1="50" y1="30" x2="50" y2="70" />
+        <line x1="25" y1="50" x2="75" y2="50" />
+      </svg>`
+    },
+    {
+      letter: 'C',
+      label: 'Green Sprout',
+      svg: `<svg viewBox="0 0 100 100" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 85 Q50 45 70 35 C55 35 45 50 50 85 Z" fill="#4ade80" />
+        <path d="M50 60 C35 55 30 70 40 75 C45 70 50 65 50 60 Z" fill="#86efac" />
+      </svg>`
+    },
+    {
+      letter: 'D',
+      label: 'Wind Turbine',
+      svg: `<svg viewBox="0 0 100 100" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+        <line x1="50" y1="90" x2="50" y2="40" stroke-width="3" />
+        <circle cx="50" cy="40" r="4" fill="#1e293b" />
+        <line x1="50" y1="40" x2="30" y2="25" stroke-width="2" />
+        <line x1="50" y1="40" x2="70" y2="25" stroke-width="2" />
+        <line x1="50" y1="40" x2="50" y2="65" stroke-width="2" />
+      </svg>`
+    }
   ]
 };
 
 /**
  * Helper to retrieve or synthesize a topic-matching visual
  */
-export function getCuratedVisualForTopic(topic: string, style: 'line_art' | 'vector_accent' = 'line_art'): WorksheetVisual {
+export function getCuratedVisualForTopic(topic: string, style: VisualStyle = 'line_art'): WorksheetVisual {
   const lowerTopic = (topic || '').toLowerCase();
 
   let matched = CURATED_VISUAL_LIBRARY.find((item) =>
@@ -480,7 +701,7 @@ export function getCuratedVisualForTopic(topic: string, style: 'line_art' | 'vec
     matched = CURATED_VISUAL_LIBRARY[2];
   }
 
-  const svg = style === 'line_art' ? matched.svgLineArt : matched.svgVectorAccent;
+  const svg = style === 'vector_accent' ? matched.svgVectorAccent : matched.svgLineArt;
 
   return {
     id: `visual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

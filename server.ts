@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -28,6 +28,17 @@ function getGenAI(): GoogleGenAI {
 
 // Resilient Model cascade: gemini-3.8-flash -> gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-3.1-pro-preview
 const CANDIDATE_MODELS = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
+
+function cleanJsonResponse(rawText: string): string {
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```')) {
+    const match = cleaned.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (match && match[1]) {
+      cleaned = match[1].trim();
+    }
+  }
+  return cleaned;
+}
 
 function generateThematicSvgFallback(topic: string, style: string = 'line_art', description?: string): string {
   const t = (topic || '').toLowerCase();
@@ -323,30 +334,36 @@ My Speaking Notes & Vocabulary:
 
 function buildTemplatePrompt(topic: string, gradeLevel: string, template: string = 'comprehensive'): string {
   const level = gradeLevel || 'beginner (A1-A2)';
-  const baseHeader = `You are an expert English language (ESL) teacher. 
-Create a highly realistic, professional English worksheet about "${topic}" for students at the "${level}" proficiency level.
+  const baseHeader = `You are an expert English as a Foreign Language (EFL/ESL) teacher. 
+Create a highly structured, realistic classroom worksheet about "${topic}" for students at the "${level}" proficiency level.
 
-Format the worksheet strictly as plain text (do not output any markdown like ** or #, just clean plain text for printing):
-
-Name: ______________________ Date: ___________
+Formatting Requirements (Plain text for school worksheets, no markdown backticks):
+Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
 Worksheet Topic: ${topic.toUpperCase()}
 Proficiency Level: ${level.toUpperCase()}
 
 INSTRUCTIONS: 
-Read the following sections carefully and complete the exercises.`;
+Read the instructions for each section carefully and write your answers clearly in the spaces provided.`;
 
   if (template === 'vocab_matching') {
     return `${baseHeader}
 
-SECTION A: Target Vocabulary Matching
-(Provide 4 actual vocabulary words or phrases related to "${topic}" and clear, accurate definitions, randomized for matching with brackets [   ] 1-4 and letters A-D).
+SECTION A: Match the Words with Their Definitions
+(Provide 4 key vocabulary words on the left with brackets [   ] 1-4 and 4 accurate, clear definitions on the right with letters A-D related to "${topic}").
 
-SECTION B: Fill-in-the-Blank Sentences
-(Provide a Word Bank containing the 4 terms from Section A. Then provide 4 fill-in-the-blank sentences testing those words in context with blank lines: _______________________).
+SECTION B: Fill in the Blanks with Words from the Box
+(Provide: Word Bank: [ word1 | word2 | word3 | word4 ])
+(Provide 4 fill-in-the-blank sentences using the word bank words with clear blank lines: _______________________).
 
-SECTION C: Word in Action (Original Sentences)
-(Instruct students to pick 2 words and write original sentences describing their experience with "${topic}", providing blank lines for each).
+SECTION C: Put the Words in Brackets in the Right Form
+(Provide 3-4 sentences where students put bracketed root words like (pollute), (travel), (danger), (careful) into the correct grammatical form on the blank line: _______________________).
+
+SECTION D: What Would You Do? (Hypothetical Reflection)
+If you were in a situation related to "${topic}", what would you do? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
   }
@@ -354,40 +371,38 @@ SECTION C: Word in Action (Original Sentences)
   if (template === 'grammar_exercise') {
     return `${baseHeader}
 
-SECTION A: Verb Form Selection & Fill-in-the-Blank
-(Provide 4 targeted grammar/syntax practice sentences related to "${topic}" with verbs or words in parentheses like (go) or (study), and clear blanks _______________________ for students to conjugate or fill).
+SECTION A: Put the Verbs in the Correct Tense or Form
+(Provide 4 grammar practice sentences related to "${topic}" with verbs in parentheses like (travel), (not see), (arrive), (be) and blanks: _______________________).
 
 SECTION B: Spot the Mistake & Rewrite Correctly
-(Provide 3 sentences that each contain one realistic grammar mistake related to "${topic}". Include lines underneath for students to write the corrected version: Correction: _____________________________________________________________________________).
+(Provide 3 sentences that each contain one grammatical error. Include lines underneath: Correction: _____________________________________________________________________________).
 
-SECTION C: Sentence Transformation
-(Provide 3 sentence transformation prompts where students rewrite a given sentence using target grammar words like conditionals, modals, or tenses while keeping the meaning intact).
+SECTION C: Sentence Transformation & Conditionals
+(Provide 2-3 sentence transformations or "If you were..." conditional prompts related to "${topic}").
 
 --- End of Worksheet ---`;
   }
 
   if (template === 'quiz') {
-    return `You are an expert English language (ESL) teacher. 
-Create a formal, realistic assessment quiz about "${topic}" for students at the "${level}" proficiency level.
+    return `You are an expert ESL test writer.
+Create a formal, clean formative assessment quiz about "${topic}" for "${level}" students.
 
-Format strictly as plain text (do not output markdown like ** or #):
-
-Name: ______________________ Date: ___________ Score: _____ / 20
+Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
 Worksheet Topic: ${topic.toUpperCase()} (ASSESSMENT QUIZ)
 Proficiency Level: ${level.toUpperCase()}
 
 INSTRUCTIONS: 
-Read each question carefully and answer all questions directly on this exam sheet. Total time: 25 minutes.
+Read each question carefully and write your answers directly on this paper.
 
 SECTION A: Multiple Choice Questions (4 Points)
-(Provide 3-4 realistic multiple-choice questions about "${topic}". For each question, provide 4 choices formatted as [   ] A. ..., [   ] B. ..., [   ] C. ..., [   ] D. ... with exactly one correct answer).
+(Provide 3-4 realistic multiple choice questions about "${topic}" with choices [   ] A. ..., [   ] B. ..., [   ] C. ..., [   ] D. ...).
 
 SECTION B: True or False Statements (3 Points)
-(Provide 2-3 True or False statements about "${topic}". Format with [        ] brackets for TRUE/FALSE and provide an Explanation line underneath).
+(Provide 2-3 statements with [        ] brackets for TRUE/FALSE and an Explanation line underneath).
 
-SECTION C: Short Answer Inquiry (3 Points)
-(Provide 1 conceptual question requiring students to explain a key rule or concept about "${topic}" in 2-3 complete sentences, with blank lines underneath).
+SECTION C: What Would You Do? (Scenario Reflection) (3 Points)
+(Provide 1 hypothetical scenario prompt: "If you were... what would you do? Explain in 2-3 sentences:" with 3 blank lines).
 
 --- End of Worksheet ---`;
   }
@@ -396,13 +411,19 @@ SECTION C: Short Answer Inquiry (3 Points)
     return `${baseHeader}
 
 SECTION A: Reading Passage
-(Provide an informative, high-quality 2-paragraph reading passage about "${topic}" marked with [Paragraph 1] and [Paragraph 2]).
+(Provide a 2-paragraph engaging text about "${topic}". Include 2 underlined words like <u>they</u> or <u>this solution</u> in the text).
 
-SECTION B: Text-Dependent Comprehension Questions
-(Provide 3 comprehension questions that require students to retrieve facts and make inferences from the passage, with blank lines underneath).
+SECTION B: Comprehension & Reference Questions
+(Provide 2 text comprehension questions, plus 1 Reference Question: "What does the underlined word '...' in paragraph 1 refer to?").
 
-SECTION C: Critical Thinking & Reflection
-(Provide 1 thought-provoking discussion prompt relating "${topic}" to the student's personal opinion, with lines underneath).
+SECTION C: Put the Words in Brackets in the Right Form
+(Provide 2 sentences testing word forms from the text with blanks _______________________).
+
+SECTION D: What Would You Do? (Critical Reflection)
+If you were in a real-world scenario regarding "${topic}", what would you do? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
   }
@@ -410,16 +431,20 @@ SECTION C: Critical Thinking & Reflection
   // Default 'comprehensive'
   return `${baseHeader}
 
-SECTION A: Everyday Vocabulary Matching
-(Provide 4 actual vocabulary words or phrases related to "${topic}" and their definitions, mixed up for a matching exercise with [   ] and letters A-D).
+SECTION A: Match the Words with Their Definitions
+(Provide 4 key vocabulary terms [   ] 1-4 and definitions A-D about "${topic}").
 
-SECTION B: Reading Comprehension (Dialogue)
-(Provide a short, realistic, engaging dialogue between two people about "${topic}").
-(Provide 2-3 reading comprehension questions with blank lines underneath for answers).
+SECTION B: Fill in the Blanks with Words from the Box
+(Provide: Word Bank: [ word1 | word2 | word3 | word4 ] and 4 cloze sentences with blanks _______________________).
 
-SECTION C: Speaking & Roleplay Practice
-(Provide a brief roleplay scenario or speaking prompt for pair work related to "${topic}").
-(Provide space/lines for students to write notes before speaking).
+SECTION C: Put the Words in Brackets in the Right Form
+(Provide 3 sentences with bracketed words to conjugate or derive).
+
+SECTION D: What Would You Do? (Expressive Prompt)
+If you were in a scenario regarding "${topic}", what would you do? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
 }
@@ -608,6 +633,144 @@ Style guidelines:
         worksheet: fallbackWorksheet, 
         source: 'fallback', 
         details: error?.message || 'Handled gracefully with template fallback' 
+      });
+    }
+  });
+
+  app.post('/api/chat-worksheet', async (req, res) => {
+    try {
+      const { messages, currentWorksheet } = req.body;
+
+      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: 'Messages history is required' });
+      }
+
+      // Convert messages to history string
+      const conversationHistory = messages.map((m: any) => {
+        const role = m.sender === 'user' ? 'User (Teacher)' : 'Assistant (Curriculum Designer)';
+        return `${role}: ${m.text}`;
+      }).join('\n\n');
+
+      const systemInstruction = `You are a distinguished Senior English Teacher and Curriculum Specialist with over 20 years of classroom experience.
+You specialize in designing balanced, engaging, and pedagogically sound English worksheets for students of all proficiency levels.
+Your persona is warm, encouraging, highly professional, articulate, and deeply committed to student academic growth.
+Your conversational responses MUST reflect this Senior English Teacher persona:
+- Use encouraging, professional educational vocabulary (e.g. "pedagogical progression", "scaffolded exercises", "conceptual reinforcement").
+- Briefly offer practical tips on how to deliver or scaffold the exercises in class.
+- Support and validate the teacher's requests with professional enthusiasm.
+
+Your primary task is to help the teacher design, generate, and refine high-quality educational worksheets.
+The user is having a conversational chat with you. Based on the history, understand what change or creation is requested.
+If there is an existing worksheet provided, always keep or refine its parts instead of discarding it unless asked to start fresh.
+
+You MUST respond with a JSON object containing EXACTLY:
+1. "assistantResponse": A warm, professional response (1-3 sentences) in your Senior English Teacher voice describing the educational reasoning behind what you did/refined (e.g., "I have successfully generated a new grammar drill on travelling, scaffolded with 5 questions to reinforce past participle forms. I suggest reading these aloud in class first!").
+2. "worksheet": The full, complete plain-text worksheet itself. Never truncate, omit sections, or output short snippets. Always render the entire worksheet.
+
+Worksheet format rules:
+- Name and Date blank lines at the very top.
+- Clear, descriptive title.
+- High-quality instructional text for each section.
+- Exercises using standard types: Match definitions, fill in the blanks, conjugate/word forms in brackets, reading comprehension passage with underlined words, or critical reflection questions ("If you were... what would you do?").
+- Include blanks (e.g. "_______________________") for students to write answers.`;
+
+      const prompt = `CONVERSATION HISTORY:
+${conversationHistory}
+
+${currentWorksheet ? `CURRENT WORKSHEET IN BUILDER (Modify or expand this based on the user's last message):
+${currentWorksheet}` : 'No worksheet generated yet. Create a beautiful new worksheet based on the user\'s prompt.'}
+
+Please output the JSON matching the required schema.`;
+
+      if (!process.env.GEMINI_API_KEY) {
+        console.warn('GEMINI_API_KEY not configured for chat. Providing educational fallback response.');
+        const lastUserMsg = messages.filter((m: any) => m.sender === 'user').pop()?.text || 'English Lesson';
+        const fallbackWorksheet = generatePedagogicalFallback(lastUserMsg, 'Intermediate (B1-B2)', 'comprehensive');
+        return res.json({
+          assistantResponse: "Here is a beautifully structured worksheet customized to your request.",
+          worksheet: fallbackWorksheet,
+          source: 'fallback'
+        });
+      }
+
+      let resultObj: any = null;
+
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          console.log(`[LexiScan Chat] Invoking model ${modelName} for conversational worksheet creation...`);
+          const ai = getGenAI();
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.6,
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  assistantResponse: {
+                    type: Type.STRING,
+                    description: "A short, friendly 1-2 sentence message describing what was done or changed."
+                  },
+                  worksheet: {
+                    type: Type.STRING,
+                    description: "The complete, fully revised plain-text worksheet ready for A4 printing."
+                  }
+                },
+                required: ["assistantResponse", "worksheet"]
+              }
+            }
+          });
+
+          if (response && response.text) {
+            const cleanedText = cleanJsonResponse(response.text);
+            const parsed = JSON.parse(cleanedText);
+            if (parsed.assistantResponse && parsed.worksheet) {
+              resultObj = parsed;
+              console.log(`[LexiScan Chat] Successfully completed conversational turn via ${modelName}`);
+              break;
+            }
+          }
+        } catch (err: any) {
+          const status = err?.status || err?.code || 500;
+          const errStr = (err?.message || String(err)).toLowerCase();
+          const isHighDemand = status === 503 || errStr.includes('503') || errStr.includes('high demand') || errStr.includes('unavailable');
+          const isRateLimited = status === 429 || errStr.includes('429') || errStr.includes('rate limit') || errStr.includes('quota');
+
+          if (isHighDemand || isRateLimited) {
+            console.log(`[LexiScan Chat] Model ${modelName} is temporarily overloaded/busy (${status}). Cascading to next candidate...`);
+            await new Promise(resolve => setTimeout(resolve, 250));
+          } else {
+            console.log(`[LexiScan Chat] Model ${modelName} trial notice:`, err?.message || err);
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      }
+
+      if (resultObj) {
+        return res.json({
+          assistantResponse: resultObj.assistantResponse,
+          worksheet: resultObj.worksheet,
+          source: 'ai'
+        });
+      }
+
+      // Final fallback
+      const lastUserMsg = messages.filter((m: any) => m.sender === 'user').pop()?.text || 'English Lesson';
+      const fallbackWorksheet = generatePedagogicalFallback(lastUserMsg, 'Intermediate (B1-B2)', 'comprehensive');
+      res.json({
+        assistantResponse: "I processed your request and established this standard curriculum template for you.",
+        worksheet: fallbackWorksheet,
+        source: 'fallback'
+      });
+
+    } catch (error: any) {
+      console.error('[LexiScan Chat] Fatal chat route error:', error);
+      res.json({
+        assistantResponse: "I encountered a minor processing issue, so I provided a structured template for your topic.",
+        worksheet: generatePedagogicalFallback('Grammar & Vocabulary Practice', 'Intermediate (B1-B2)', 'comprehensive'),
+        source: 'fallback'
       });
     }
   });

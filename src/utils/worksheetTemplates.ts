@@ -24,64 +24,67 @@ export interface WorksheetTemplate {
 export const WORKSHEET_TEMPLATES: Record<WorksheetTemplateId, WorksheetTemplate> = {
   vocab_matching: {
     id: 'vocab_matching',
-    name: 'Vocabulary Matching',
-    tagline: 'Term association, word banks, and context usage',
-    description: 'Focuses on building lexical mastery through definitions matching, cloze sentences, and active word application.',
+    name: 'Vocabulary Matching & Context',
+    tagline: 'Match definitions, fill in blanks, & put words in correct forms',
+    description: 'Builds lexical accuracy with word-to-definition matching, word bank cloze sentences, and word form derivations.',
     category: 'Vocabulary & Lexis',
     iconName: 'book-open',
     sections: [
-      { code: 'SECTION A', title: 'Target Vocabulary Matching', description: 'Match 4-5 key terms to precise definitions (A-D/E).' },
-      { code: 'SECTION B', title: 'Fill-in-the-Blank (Cloze Practice)', description: 'Complete sentences using terms from the provided word bank.' },
-      { code: 'SECTION C', title: 'Word in Action (Creative Writing)', description: 'Write original sentences utilizing the new target vocabulary.' },
+      { code: 'SECTION A', title: 'Match the Words with Their Definitions', description: 'Match target vocabulary items (1-4) with their definitions (A-D).' },
+      { code: 'SECTION B', title: 'Fill in the Blanks with Words from the Box', description: 'Complete sentences using the provided word bank.' },
+      { code: 'SECTION C', title: 'Put the Words in the Right Form', description: 'Complete the sentences by placing bracketed root words into the correct grammatical form.' },
     ],
     suggestedTopics: [
-      'Kitchen & Culinary Tools',
-      'Airport & Travel Essentials',
-      'Medical & Pharmacy Terms',
-      'Office & Digital Collaboration',
-      'At the Restaurant & Ordering',
-      'Weather & Climate Terms'
+      'Pollution & Environmental Protection',
+      'Accommodations & Hotel Stays',
+      'Celebrations & Cultural Festivals',
+      'Travelling & Airport Transit',
+      'Entertainments & Leisure Activities',
+      'Family Relationships & Friendships'
     ],
     sampleGenerator: (topic: string, gradeLevel: string) => {
-      const cleanTopic = topic.trim() || 'Kitchen & Cooking';
+      const cleanTopic = topic.trim() || 'Pollution & Environmental Care';
       const upperTopic = cleanTopic.toUpperCase();
       const upperLevel = (gradeLevel || 'Beginner (A1-A2)').toUpperCase();
 
-      return `Name: ______________________ Date: ___________
+      return `Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
-Worksheet Topic: ${upperTopic} (VOCABULARY MATCHING)
+Worksheet Topic: ${upperTopic} (VOCABULARY & USAGE)
 Proficiency Level: ${upperLevel}
 
 INSTRUCTIONS: 
-Read the following sections carefully and complete the exercises.
+Read the instructions for each section carefully and write your answers clearly in the spaces provided.
 
-SECTION A: Target Vocabulary Matching
-Match each key vocabulary word on the left with its correct definition on the right. Write the matching letter (A-D) in each bracket.
+SECTION A: Match the Words with Their Correct Definitions
+Match each vocabulary term on the left with its corresponding definition on the right. Write the matching letter (A-D) in each bracket.
 
-[   ] 1. Essential Tool            A. A clear, step-by-step guide explaining how to prepare a dish
-[   ] 2. Fresh Ingredient          B. A specific utensil or device used to perform a culinary task
-[   ] 3. Detailed Recipe           C. An item of food used in combination with others to make a meal
-[   ] 4. Safe Preparation          D. The careful act of washing, cutting, and seasoning food safely
+[   ] 1. Pollution                  A. Things that are thrown away because they are no longer needed
+[   ] 2. Renewable Energy           B. The introduction of harmful substances into the air, water, or soil
+[   ] 3. Toxic Waste                C. Power derived from natural resources like sunlight and wind
+[   ] 4. Conservation               D. The wise protection and careful preservation of natural resources
 
-SECTION B: Fill-in-the-Blank Sentences
-Word Bank: [ essential tool | fresh ingredient | detailed recipe | safe preparation ]
-Choose the correct term from the word bank to complete each statement:
+SECTION B: Fill in the Blanks with Words from the Box
+Word Bank: [ pollution | renewable energy | toxic waste | conservation ]
+Choose the correct word from the word bank to complete each sentence:
 
-1. Before starting to cook, follow proper _______________________ by washing your hands and surfaces.
-2. Fresh garlic is a key _______________________ that adds rich flavor to many home meals.
-3. A good chef's knife is an _______________________ that makes cutting vegetables much faster.
-4. She consulted the _______________________ to make sure she added the exact amount of olive oil.
+1. Switching to _______________________ such as solar panels helps reduce greenhouse gases.
+2. Plastic bottles and bags are a major cause of ocean _______________________ worldwide.
+3. Strict laws prevent factories from dumping _______________________ into nearby rivers.
+4. Wildlife _______________________ programs protect endangered animals and their natural habitats.
 
-SECTION C: Word in Action (Original Sentences)
-Choose two words from Section A and compose one complete sentence for each, describing your own experience with ${cleanTopic}:
+SECTION C: Put the Words in Brackets in the Right Form
+Complete each sentence by putting the root word in parentheses into the correct grammatical form:
 
-1. Word: _______________________
-   Sentence: _______________________________________________________________________________
-   _________________________________________________________________________________________
+1. It is important to act (responsible) _______________________ when dealing with household trash.
+2. Many countries are investing heavily in (clean) _______________________ public transport systems.
+3. If we don't protect the forests, many species will face total (extinct) _______________________.
+4. Air quality in major cities has (improve) _______________________ due to new eco-regulations.
 
-2. Word: _______________________
-   Sentence: _______________________________________________________________________________
-   _________________________________________________________________________________________
+SECTION D: What Would You Do?
+If you were the leader of your city, what would you do to reduce pollution in your neighborhood? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
     }
@@ -89,68 +92,62 @@ Choose two words from Section A and compose one complete sentence for each, desc
 
   grammar_exercise: {
     id: 'grammar_exercise',
-    name: 'Grammar Exercise',
-    tagline: 'Targeted syntax drills, error correction, & transformations',
+    name: 'Grammar & Syntax Drill',
+    tagline: 'Put verbs in right tenses, error spotting, & conditionals',
     description: 'Drills accurate sentence structures, verb tenses, error identification, and communicative transformations.',
     category: 'Grammar & Syntax',
     iconName: 'check-circle',
     sections: [
-      { code: 'SECTION A', title: 'Verb Conjugation & Form Selection', description: 'Fill the blanks using the correct form of the verbs in parentheses.' },
-      { code: 'SECTION B', title: 'Error Correction & Spotting', description: 'Identify the grammatical error in each sentence and rewrite it correctly.' },
-      { code: 'SECTION C', title: 'Sentence Transformation / Combining', description: 'Rewrite sentences using target conjunctions or conditional clauses.' },
+      { code: 'SECTION A', title: 'Put the Verbs in the Correct Tense or Form', description: 'Fill the blanks using the correct form of the verbs in parentheses.' },
+      { code: 'SECTION B', title: 'Spot the Mistake & Rewrite Correctly', description: 'Identify the grammatical error in each sentence and rewrite it correctly.' },
+      { code: 'SECTION C', title: 'If You Were... Hypothetical Scenarios', description: 'Complete conditional sentences starting with hypothetical prompts.' },
     ],
     suggestedTopics: [
-      'Past Simple vs. Present Perfect',
-      'First & Second Conditionals',
-      'Prepositions of Place & Time',
-      'Modals of Advice & Obligation (Should / Must)',
-      'Comparative & Superlative Adjectives',
-      'Passive Voice in Everyday News'
+      'Travelling & Vacation Plans (Past vs. Future)',
+      'Accommodations & Hotel Booking Inquiries',
+      'Friendships & Social Habits (Conditionals)',
+      'Celebrations & Family Traditions (Passive Voice)',
+      'Entertainments & Hobbies (Present Perfect)',
+      'Protecting the Environment (Modals & Obligation)'
     ],
     sampleGenerator: (topic: string, gradeLevel: string) => {
-      const cleanTopic = topic.trim() || 'Past Simple vs. Present Perfect';
+      const cleanTopic = topic.trim() || 'Travelling & Tourism';
       const upperTopic = cleanTopic.toUpperCase();
       const upperLevel = (gradeLevel || 'Intermediate (B1-B2)').toUpperCase();
 
-      return `Name: ______________________ Date: ___________
+      return `Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
-Worksheet Topic: ${upperTopic} (GRAMMAR DRILL)
+Worksheet Topic: ${upperTopic} (GRAMMAR & SYNTAX DRILL)
 Proficiency Level: ${upperLevel}
 
 INSTRUCTIONS: 
-Review the grammar focus carefully and complete all three sections below.
+Review the grammar rules and complete all exercises below with proper syntax and punctuation.
 
-SECTION A: Verb Tense Selection & Conjugation
-Complete the sentences by placing the verb in parentheses into the correct tense for ${cleanTopic}:
+SECTION A: Put the Words in Brackets into the Right Form or Tense
+Complete each sentence by placing the verb in parentheses into the correct grammatical form:
 
-1. Last summer, Maria _______________________ (travel) to Spain for an intensive language workshop.
-2. I _______________________ (not finish) my homework yet, so I cannot go out tonight.
-3. We _______________________ (visit) that science museum three times since it opened last year.
-4. When they _______________________ (arrive) at the airport yesterday, the flight was already boarding.
+1. Last summer, our family (travel) _______________________ across southern Europe by train.
+2. If you visit Rome next month, you (see) _______________________ the ancient Colosseum.
+3. We (not book) _______________________ our hotel accommodation yet because flight dates changed.
+4. While they (wait) _______________________ at the boarding gate, the pilot made an announcement.
 
-SECTION B: Spot the Mistake & Rewrite Correctly
-Each sentence below contains one grammatical error. Underline the mistake and write the corrected sentence on the line below:
+SECTION B: Spot the Mistake & Rewrite the Sentence
+Each sentence below contains one grammatical error. Find the error and write the correct sentence on the line:
 
-1. Sentence: "He has gone to the bookstore yesterday afternoon after his class."
+1. Sentence: "She has went to the airport ticket counter two hours ago."
    Correction: _____________________________________________________________________________
 
-2. Sentence: "I didn't saw my best friend since last Monday morning."
+2. Sentence: "If I will have enough money, I will travel to Japan next spring."
    Correction: _____________________________________________________________________________
 
-3. Sentence: "Did you already finished reading the chapter that was assigned?"
+3. Sentence: "They didn't enjoyed their stay at the seaside resort because of the rain."
    Correction: _____________________________________________________________________________
 
-SECTION C: Sentence Transformation
-Rewrite each sentence starting with the prompt words given, keeping the original meaning intact:
-
-1. Original: "I started living in this city five years ago, and I still live here."
-   Rewrite (Use 'have lived'): _____________________________________________________________
-
-2. Original: "It has been three months since Daniel last called his cousin."
-   Rewrite (Use 'for three months'): _______________________________________________________
-
-3. Original: "She bought the tickets on Friday and still has them in her pocket."
-   Rewrite (Use 'already'): _______________________________________________________________
+SECTION C: Conditional & Hypothetical Production
+If you were planning a trip to a foreign country with your best friends, what would you do first? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
     }
@@ -158,71 +155,69 @@ Rewrite each sentence starting with the prompt words given, keeping the original
 
   quiz: {
     id: 'quiz',
-    name: 'Quiz (Assessment)',
-    tagline: 'Formal assessment with MCQs, True/False, & open inquiry',
-    description: 'Structured diagnostic or summative test featuring scoring rubrics, multiple-choice, true/false, and short essays.',
+    name: 'Formative Assessment Quiz',
+    tagline: 'Multiple choice, True/False with evidence, & open inquiry',
+    description: 'Diagnostic or summative test featuring scoring rubrics, multiple-choice, true/false, and short essays.',
     category: 'Assessment & Test',
     iconName: 'help-circle',
     sections: [
-      { code: 'SECTION A', title: 'Multiple Choice Questions (MCQ)', description: 'Select the single best answer from choices A, B, C, or D.' },
-      { code: 'SECTION B', title: 'True or False with Evidence', description: 'Determine validity of factual statements and note the reason.' },
-      { code: 'SECTION C', title: 'Short Answer Inquiry & Explanation', description: 'Demonstrate deep conceptual mastery in 2-3 complete sentences.' },
+      { code: 'SECTION A', title: 'Multiple Choice Questions (4 Points)', description: 'Select the single best answer from choices A, B, C, or D.' },
+      { code: 'SECTION B', title: 'True or False with Evidence (3 Points)', description: 'Determine validity of factual statements and note the reason.' },
+      { code: 'SECTION C', title: 'Short Answer & Scenario Reflection (3 Points)', description: 'Demonstrate deep conceptual mastery in 2-3 complete sentences.' },
     ],
     suggestedTopics: [
-      'Travel & Cultural Etiquette Quiz',
-      'Business Email & Workplace Review',
-      'Daily Conversation & Polite Phrasing',
-      'Health, Fitness & Wellness Checkup',
-      'Environmental Awareness & Sustainability',
-      'Everyday Phrasal Verbs Assessment'
+      'Family Relationships & Household Roles',
+      'Friendships & Conflict Resolution',
+      'Accommodations & Hotel Etiquette',
+      'Celebrations & Cultural Holidays',
+      'Entertainments, Cinema & Media Habits',
+      'Environmental Challenges & Pollution'
     ],
     sampleGenerator: (topic: string, gradeLevel: string) => {
-      const cleanTopic = topic.trim() || 'Travel Etiquette & Customs';
+      const cleanTopic = topic.trim() || 'Family Relationships & Friendships';
       const upperTopic = cleanTopic.toUpperCase();
       const upperLevel = (gradeLevel || 'Beginner (A1-A2)').toUpperCase();
 
-      return `Name: ______________________ Date: ___________ Score: _____ / 20
+      return `Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
-Worksheet Topic: ${upperTopic} (FORMATIVE QUIZ)
+Worksheet Topic: ${upperTopic} (FORMATIVE ASSESSMENT)
 Proficiency Level: ${upperLevel}
 
 INSTRUCTIONS: 
 Read each question carefully. Answer all questions directly on the test paper. Total time: 25 minutes.
 
 SECTION A: Multiple Choice Questions (4 Points)
-Circle the letter of the correct answer for each question regarding ${cleanTopic}:
+Circle the letter of the correct answer for each statement:
 
-1. What is the most appropriate phrase when greeting a shopkeeper in English?
-   [   ] A. "Hey you, give me that."
-   [   ] B. "Good morning! Could you help me find this item, please?"
-   [   ] C. "How much is this right now?"
-   [   ] D. "I demand to see your manager immediately."
+1. Which quality is most important for maintaining a healthy, long-lasting friendship?
+   [   ] A. Gossiping about private secrets
+   [   ] B. Mutual trust, empathy, and active listening
+   [   ] C. Competing over who has more possessions
+   [   ] D. Ignoring messages when a friend needs help
 
-2. When asking for directions to the nearest train station, which question is most polite?
-   [   ] A. "Where train station?"
-   [   ] B. "Take me to the train right now."
-   [   ] C. "Excuse me, could you tell me the way to the central train station?"
-   [   ] D. "Is train open?"
+2. When a disagreement occurs between family members, what is the best approach?
+   [   ] A. Shout louder than everyone else
+   [   ] B. Refuse to speak for several weeks
+   [   ] C. Communicate calmly and listen to the other perspective
+   [   ] D. Blame others immediately without discussion
 
-3. Which phrase is commonly used to politely ask for clarification during a conversation?
-   [   ] A. "Speak louder!"
-   [   ] B. "I beg your pardon, could you repeat that once more?"
-   [   ] C. "You are not speaking clearly."
-   [   ] D. "Never mind."
+3. Which phrase is an expression of genuine appreciation towards a family member?
+   [   ] A. "You always make mistakes."
+   [   ] B. "Thank you for always supporting me when I need encouragement."
+   [   ] C. "Whatever, I don't care."
+   [   ] D. "Do this for me right now."
 
 SECTION B: True or False Statements (3 Points)
 Write 'TRUE' or 'FALSE' in the bracket. If false, write one sentence explaining why:
 
-[        ] 1. It is considered polite to say "Thank you" and "Have a nice day" when leaving a store.
+[        ] 1. True friends encourage each other to achieve their personal and academic goals.
 Explanation: _______________________________________________________________________________
 
-[        ] 2. Interrupting someone while they are speaking is acceptable in formal discussions.
+[        ] 2. Sharing household chores with family members creates unnecessary conflict.
 Explanation: _______________________________________________________________________________
 
-SECTION C: Short Answer Inquiry (3 Points)
-Answer the prompt below in 2-3 complete, well-formed sentences:
-
-Prompt: Describe one essential etiquette rule you should always remember when communicating about ${cleanTopic} in an English-speaking country:
+SECTION C: Hypothetical Scenario & Reflection (3 Points)
+If you were organizing a special celebration to surprise a dear friend or family member, what would you do? Explain your plan in 2-3 sentences:
 ____________________________________________________________________________________________
 ____________________________________________________________________________________________
 ____________________________________________________________________________________________
@@ -233,74 +228,68 @@ ________________________________________________________________________________
 
   comprehensive: {
     id: 'comprehensive',
-    name: 'Comprehensive Lesson',
-    tagline: 'Balanced 3-part layout: Vocab, Dialogue, & Roleplay',
-    description: 'The standard integrated communicative layout combining vocabulary matching, dialogue comprehension, and peer roleplay.',
+    name: 'Comprehensive Lesson Pack',
+    tagline: 'Matching, Cloze, Grammar Forms, & Communicative Tasks',
+    description: 'Integrated multi-skill layout featuring vocabulary matching, fill in the blanks, verb form drills, and dialogue analysis.',
     category: 'Integrated Skills',
     iconName: 'layers',
     sections: [
-      { code: 'SECTION A', title: 'Everyday Vocabulary Matching', description: 'Vocabulary building with definition pairing.' },
-      { code: 'SECTION B', title: 'Reading Comprehension (Dialogue)', description: 'Real-world conversational dialogue with text-based questions.' },
-      { code: 'SECTION C', title: 'Speaking & Roleplay Practice', description: 'Collaborative partner prompt with guided speaking notes.' },
+      { code: 'SECTION A', title: 'Match the Words with Their Definitions', description: 'Vocabulary building with definition pairing.' },
+      { code: 'SECTION B', title: 'Fill in the Blanks with Words from the Box', description: 'Cloze sentence practice using target lexis.' },
+      { code: 'SECTION C', title: 'Put the Words in the Right Form & Tense', description: 'Syntactic practice with grammatical bracketed words.' },
+      { code: 'SECTION D', title: 'What Would You Do? Expressive Prompt', description: 'Real-world application and personal response writing.' },
     ],
     suggestedTopics: [
-      'Grocery Shopping',
-      'Commuting to Work',
-      'Coffee Shop Ordering',
-      'Family & Weekend Plans',
-      'Free Time Activities',
-      'Visiting the Doctor'
+      'Accommodations & Hotel Booking',
+      'Celebrations & Cultural Traditions',
+      'Pollution & Eco-Friendly Living',
+      'Travelling & Vacation Adventures',
+      'Entertainments, Gaming & Cinema',
+      'Friendships & Social Connections'
     ],
     sampleGenerator: (topic: string, gradeLevel: string) => {
-      const cleanTopic = topic.trim() || 'Grocery Shopping';
+      const cleanTopic = topic.trim() || 'Accommodations & Hotel Stays';
       const upperTopic = cleanTopic.toUpperCase();
-      const upperLevel = (gradeLevel || 'Beginner (A1-A2)').toUpperCase();
+      const upperLevel = (gradeLevel || 'Intermediate (B1-B2)').toUpperCase();
 
-      return `Name: ______________________ Date: ___________
+      return `Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
-Worksheet Topic: ${upperTopic}
+Worksheet Topic: ${upperTopic} (COMPREHENSIVE UNIT)
 Proficiency Level: ${upperLevel}
 
 INSTRUCTIONS: 
-Read the following sections carefully and complete the exercises.
+Complete all activities below. Pay attention to spelling, verb agreements, and neat handwriting.
 
-SECTION A: Everyday Vocabulary Matching
-Match each key vocabulary term on the left with its correct definition on the right. Write the corresponding letter (A-D) in each bracket.
+SECTION A: Match the Words with Their Correct Definitions
+Match each vocabulary term on the left with its definition on the right. Write the matching letter (A-D) in each bracket.
 
-[   ] 1. Essential Expression       A. A polite question used to obtain needed information or assistance
-[   ] 2. Routine Practice           B. A fundamental word or phrase used regularly in this context
-[   ] 3. Clear Request              C. A regular, habitual action performed as part of the daily schedule
-[   ] 4. Practical Solution         D. A sensible and effective method of completing a common daily task
+[   ] 1. Reservation                A. The designated desk where guests register and receive room keys
+[   ] 2. Front Desk Reception       B. An advance arrangement to secure a hotel room or rental
+[   ] 3. Complimentary Amenity      C. Leaving a hotel after settling the bill and returning keys
+[   ] 4. Check-out Procedure        D. A free service provided by the hotel, such as breakfast or Wi-Fi
 
-SECTION B: Reading Comprehension (Dialogue)
-Read the dialogue below between two speakers discussing ${cleanTopic}:
+SECTION B: Fill in the Blanks with Words from the Box
+Word Bank: [ reservation | front desk reception | complimentary amenity | check-out procedure ]
+Complete each sentence using the appropriate term from the word bank:
 
-Speaker 1 (Alex): "Hello! Are you getting ready for our plans regarding ${cleanTopic}?"
-Speaker 2 (Jordan): "Hi Alex! Yes, I am just reviewing my notes so that everything goes smoothly."
-Speaker 1 (Alex): "That is a great habit. Preparing key words in advance makes speaking much easier and more natural."
-Speaker 2 (Jordan): "I completely agree. Let's practice our conversation now so we feel confident."
+1. When we arrived at midnight, the staff at the _______________________ greeted us warmly.
+2. The resort offers free airport shuttle rides as a _______________________ for all guests.
+3. Please remember that the official _______________________ requires returning room keys by 11:00 AM.
+4. I confirmed our double room _______________________ two weeks before our holiday started.
 
-Comprehension Questions:
-1. What was Jordan doing to prepare for ${cleanTopic}?
-   _________________________________________________________________________________________
-   _________________________________________________________________________________________
+SECTION C: Put the Words in Brackets in the Right Form or Tense
+Complete each sentence with the correct grammatical form of the word in parentheses:
 
-2. According to Alex, what makes speaking English easier and more natural?
-   _________________________________________________________________________________________
-   _________________________________________________________________________________________
+1. The hotel staff provided an (exception) _______________________ service throughout our stay.
+2. If the room is noisy, the manager (offer) _______________________ to move you to another floor.
+3. Guests are (request) _______________________ to keep noise levels down after 10:00 PM.
+4. She was highly (satisfy) _______________________ with the cleanliness of the holiday apartment.
 
-3. Write one question you would ask a partner about ${cleanTopic}:
-   _________________________________________________________________________________________
-   _________________________________________________________________________________________
-
-SECTION C: Speaking & Roleplay Practice
-Pair Work Activity:
-Work with a partner. Student A asks three questions regarding ${cleanTopic}. Student B answers using complete sentences. Switch roles after three minutes.
-
-My Speaking Notes & Vocabulary:
-• _________________________________________________________________________________________
-• _________________________________________________________________________________________
-• _________________________________________________________________________________________
+SECTION D: What Would You Do?
+If you arrived at a hotel and discovered that your room reservation was cancelled by mistake, what would you do? Write 2-3 complete sentences:
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
 
 --- End of Worksheet ---`;
     }
@@ -308,61 +297,62 @@ My Speaking Notes & Vocabulary:
 
   reading_comprehension: {
     id: 'reading_comprehension',
-    name: 'Reading & Analysis',
-    tagline: 'Informational article, comprehension questions, & debate',
-    description: 'Designed for developing reading stamina, summarizing main ideas, contextual inference, and analytical discussion.',
+    name: 'Reading, Reference & Analysis',
+    tagline: 'Text passage, "What does underlined word refer to?", & debate',
+    description: 'Designed for reading stamina, identifying pronoun references, text-dependent comprehension, and hypothetical argumentation.',
     category: 'Reading & Literacy',
     iconName: 'file-text',
     sections: [
-      { code: 'SECTION A', title: 'Reading Passage / Informational Text', description: 'Curated passage with paragraph markers and target vocabulary.' },
-      { code: 'SECTION B', title: 'Text-Dependent Comprehension Questions', description: 'Factual retrieval, inference, and vocabulary in context.' },
-      { code: 'SECTION C', title: 'Critical Thinking & Reflection Prompt', description: 'Open-ended reflection encouraging personal opinion and argumentation.' },
+      { code: 'SECTION A', title: 'Reading Passage', description: 'Curated passage with paragraph markers and target vocabulary.' },
+      { code: 'SECTION B', title: 'Reference & Factual Comprehension Questions', description: 'Factual retrieval, inference, and "What does the underlined word refer to?"' },
+      { code: 'SECTION C', title: 'What Would You Do? Critical Reflection', description: 'Open-ended reflection encouraging personal opinion and argumentation.' },
     ],
     suggestedTopics: [
-      'The History of the Olympic Games',
-      'Artificial Intelligence in Modern Schools',
-      'Sustainable Cities & Green Energy',
-      'The Psychology of Habit Formation',
-      'Cultural Festivals Around the World',
-      'The Importance of Sleep for Brain Health'
+      'Pollution & The Future of Oceans',
+      'Travelling: Cultural Discovery vs Mass Tourism',
+      'Celebrations Around the World',
+      'Entertainments & The Rise of Digital Streaming',
+      'Family Relationships Across Different Generations',
+      'Friendships in the Age of Social Media'
     ],
     sampleGenerator: (topic: string, gradeLevel: string) => {
-      const cleanTopic = topic.trim() || 'Sustainable Living & Clean Energy';
+      const cleanTopic = topic.trim() || 'Pollution & Ocean Conservation';
       const upperTopic = cleanTopic.toUpperCase();
       const upperLevel = (gradeLevel || 'Intermediate (B1-B2)').toUpperCase();
 
-      return `Name: ______________________ Date: ___________
+      return `Name: ______________________ Date: ___________ Class: ________ Score: _____ / 20
 
 Worksheet Topic: ${upperTopic} (READING & ANALYSIS)
 Proficiency Level: ${upperLevel}
 
 INSTRUCTIONS: 
-Read the article below carefully. Annotate key points as you read, then complete the questions in Sections B and C.
+Read the informational text below. Pay attention to the underlined words, then answer the questions in Sections B and C.
 
 SECTION A: Reading Passage
-[Paragraph 1] In recent decades, conversations surrounding ${cleanTopic} have evolved from specialized scientific research into mainstream global priority. Communities worldwide are reconsidering everyday habits, from how electricity is generated to how goods are packaged and transported. Small adjustments in daily routines, when multiplied across millions of households, yield measurable positive environmental outcomes.
+[Paragraph 1] Every year, millions of tons of plastic waste enter our oceans, threatening marine ecosystems and human health. Scientists warn that if current consumption patterns continue, plastic could outweigh fish in the sea by 2050. Many coastal communities rely on healthy oceans for their livelihood, but <u>they</u> are facing unprecedented economic and environmental disruption.
 
-[Paragraph 2] Modern educators emphasize that understanding ${cleanTopic} requires both factual awareness and active critical thinking. Individuals who develop sustainable habits early in life often inspire their peers, workplaces, and local civic organizations to adopt greener solutions.
+[Paragraph 2] Fortunately, young innovators around the globe are developing creative technologies to clean polluted waterways. From automated river barriers to biodegradable packaging made from seaweed, <u>these inventions</u> offer tangible hope. However, experts agree that technological solutions alone are insufficient; governments and citizens must collaborate to stop pollution at its source.
 
-SECTION B: Text-Dependent Comprehension Questions
-Answer each question in 1-2 complete sentences based directly on the reading passage:
+SECTION B: Comprehension & Reference Questions
+Answer each question in 1-2 complete sentences based on the reading text:
 
-1. According to Paragraph 1, how has the conversation regarding this topic changed in recent decades?
+1. According to Paragraph 1, what severe consequence could occur by the year 2050?
    _________________________________________________________________________________________
    _________________________________________________________________________________________
 
-2. What does the author identify as the result of multiplying small adjustments across millions of households?
-   _________________________________________________________________________________________
-   _________________________________________________________________________________________
-
-3. According to Paragraph 2, why is it beneficial for individuals to establish these habits early in life?
-   _________________________________________________________________________________________
+2. Reference Question: What does the underlined word <u>they</u> in Paragraph 1 refer to?
    _________________________________________________________________________________________
 
-SECTION C: Critical Thinking & Personal Reflection
-Reflect on the text and write a short response (3-4 sentences) addressing the prompt below:
+3. Reference Question: What does the underlined phrase <u>these inventions</u> in Paragraph 2 refer to?
+   _________________________________________________________________________________________
 
-Prompt: If your school or workplace asked you to propose one practical improvement regarding ${cleanTopic}, what specific action would you recommend and why?
+SECTION C: Put the Words in Brackets in the Right Form
+Complete each sentence based on ideas from the text:
+1. Marine animals face severe (danger) _______________________ from microplastic debris.
+2. Governments must act (quick) _______________________ to ban single-use plastic bags.
+
+SECTION D: What Would You Do?
+If you were invited to give a 2-minute speech to your school about reducing plastic pollution, what two main actions would you ask students to do? Write 2-3 complete sentences:
 ____________________________________________________________________________________________
 ____________________________________________________________________________________________
 ____________________________________________________________________________________________

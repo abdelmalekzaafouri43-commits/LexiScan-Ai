@@ -1,5 +1,25 @@
 import React from 'react';
-import { FileText, ScanLine, Users, Clock, ArrowRight, Sparkles, Plus, Compass } from 'lucide-react';
+import { 
+  FileText, 
+  ScanLine, 
+  Users, 
+  Clock, 
+  ArrowRight, 
+  Sparkles, 
+  Plus, 
+  Compass,
+  Leaf,
+  Building,
+  PartyPopper,
+  Plane,
+  Film,
+  Heart,
+  UserCheck,
+  BookOpen
+} from 'lucide-react';
+import { THEME_CATEGORIES } from '../utils/worksheetThemes';
+import { WorksheetTemplateId } from '../utils/worksheetTemplates';
+import { DashboardTemplatesSection } from './DashboardTemplatesSection';
 
 interface MetricCardProps {
   title: string;
@@ -24,12 +44,24 @@ function AnimatedBorderCard({ children, className = "" }: { children: React.Reac
   );
 }
 
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  leaf: <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+  building: <Building className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+  'party-popper': <PartyPopper className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
+  plane: <Plane className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+  film: <Film className="w-4 h-4 text-rose-600 dark:text-rose-400" />,
+  heart: <Heart className="w-4 h-4 text-pink-600 dark:text-pink-400" />,
+  'user-check': <UserCheck className="w-4 h-4 text-teal-600 dark:text-teal-400" />,
+};
+
 export function Dashboard({ 
   onNavigate, 
-  onOpenTour 
+  onOpenTour,
+  onSelectTemplate 
 }: { 
   onNavigate: (tab: any) => void;
   onOpenTour?: () => void;
+  onSelectTemplate?: (templateId: WorksheetTemplateId, topic?: string, gradeLevel?: string) => void;
 }) {
   const metrics: MetricCardProps[] = [
     { title: 'Total Worksheets', value: '124', change: '+12% this month', icon: <FileText className="w-5 h-5" />, trend: 'up' },
@@ -37,6 +69,14 @@ export function Dashboard({
     { title: 'Active Students', value: '890', change: '+22 new this week', icon: <Users className="w-5 h-5" />, trend: 'up' },
     { title: 'Time Saved', value: '34h', change: 'vs. manual creation', icon: <Clock className="w-5 h-5" />, trend: 'up' },
   ];
+
+  const handleTemplateSelected = (templateId: WorksheetTemplateId, topic?: string, gradeLevel?: string) => {
+    if (onSelectTemplate) {
+      onSelectTemplate(templateId, topic, gradeLevel);
+    } else {
+      onNavigate('generator');
+    }
+  };
 
   const recentActivity = [
     { title: 'Ordering at a Restaurant', type: 'Worksheet', date: '2 hours ago', grade: 'Beginner (A1)' },
@@ -67,11 +107,18 @@ export function Dashboard({
             </button>
           )}
           <button 
+            onClick={() => onNavigate('chat')}
+            className="flex items-center gap-2 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-500 hover:to-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md shadow-primary-500/20 text-xs sm:text-sm group"
+          >
+            <Sparkles className="w-4 h-4 group-hover:animate-bounce" />
+            AI Chat Studio
+          </button>
+          <button 
             onClick={() => onNavigate('generator')}
-            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-md shadow-primary-500/20 text-xs sm:text-sm"
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold py-2.5 px-5 rounded-xl transition-all text-xs sm:text-sm"
           >
             <Plus className="w-4 h-4" />
-            New Worksheet
+            Custom Creator
           </button>
         </div>
       </div>
@@ -92,6 +139,63 @@ export function Dashboard({
             <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">{metric.value}</p>
           </AnimatedBorderCard>
         ))}
+      </div>
+
+      {/* Predefined Worksheet Templates Section */}
+      <DashboardTemplatesSection onSelectTemplate={handleTemplateSelected} />
+
+      {/* Curriculum Themes Showcase */}
+      <div className="bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/70 dark:from-slate-900 dark:via-slate-900/90 dark:to-indigo-950/30 border border-indigo-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
+                Thematic Curriculum Modules
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Pre-calibrated vocabulary banks, grammar goals, and educational reading passages
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('generator')}
+            className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1 group"
+          >
+            Explore all topics <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {THEME_CATEGORIES.map((category) => (
+            <div
+              key={category.id}
+              onClick={() => onNavigate('generator')}
+              className="bg-white/80 dark:bg-slate-800/70 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-500/40 p-3.5 rounded-xl cursor-pointer transition-all hover:shadow-xs group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700/50">
+                  {CATEGORY_ICONS[category.iconName] || <Leaf className="w-4 h-4" />}
+                </div>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                  {category.name}
+                </h4>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {category.themes.map((t) => (
+                  <span
+                    key={t.id}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-medium"
+                  >
+                    {t.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Two Column Layout for Activity and Quick Actions */}

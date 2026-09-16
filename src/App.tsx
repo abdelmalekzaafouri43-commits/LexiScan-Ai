@@ -4,9 +4,11 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { WorksheetGenerator } from './components/WorksheetGenerator';
 import { LayoutScanner } from './components/LayoutScanner';
+import { AIChatStudio } from './components/AIChatStudio';
 import { Settings as SettingsView } from './components/Settings';
 import { GetStartedTour } from './components/GetStartedTour';
-import { Tab } from './types';
+import { Tab, TemplatePreloadData } from './types';
+import { WorksheetTemplateId } from './utils/worksheetTemplates';
 import { Bookmark, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,6 +21,7 @@ export default function App() {
     sampleWorksheet: string;
     metadata: { topic: string; gradeLevel: string; layoutTitle: string };
   } | null>(null);
+  const [templatePreloadData, setTemplatePreloadData] = useState<TemplatePreloadData | null>(null);
 
   // Auto-launch tour for first-time visitors
   useEffect(() => {
@@ -49,15 +52,34 @@ export default function App() {
     setCurrentTab('generator');
   };
 
+  const handleSelectTemplateFromDashboard = (
+    templateId: WorksheetTemplateId, 
+    topic?: string, 
+    gradeLevel?: string
+  ) => {
+    setTemplatePreloadData({ templateId, topic, gradeLevel, autoLoadSample: true });
+    setCurrentTab('generator');
+  };
+
   const renderContent = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <Dashboard onNavigate={handleTabChange} onOpenTour={() => setIsTourOpen(true)} />;
+        return (
+          <Dashboard 
+            onNavigate={handleTabChange} 
+            onOpenTour={() => setIsTourOpen(true)}
+            onSelectTemplate={handleSelectTemplateFromDashboard} 
+          />
+        );
+      case 'chat':
+        return <AIChatStudio />;
       case 'generator':
         return (
           <WorksheetGenerator 
             scannedLayoutData={scannedPromptData}
             onClearScannedLayout={() => setScannedPromptData(null)}
+            templatePreloadData={templatePreloadData}
+            onClearTemplatePreload={() => setTemplatePreloadData(null)}
             onNavigateToScanner={() => handleTabChange('scanner')}
           />
         );
@@ -78,6 +100,7 @@ export default function App() {
 
   const getHeaderTitle = () => {
     switch (currentTab) {
+      case 'chat': return 'Conversational AI Chat Studio';
       case 'generator': return 'Worksheet Generator';
       case 'scanner': return 'External Layout Scanner';
       case 'dashboard': return 'Dashboard';

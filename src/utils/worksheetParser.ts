@@ -56,22 +56,27 @@ export function parseWorksheetText(text: string): WorksheetDocument {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Section header check
-    const sectionMatch = trimmed.match(/^SECTION\s+([A-Z0-9]+)[:\s]*(.*)$/i);
+    // Strip markdown bold asterisks, headers (#), list markers from the start/end
+    const cleanedLine = trimmed
+      .replace(/^[\s#*_-]+/, '') // Leading #, *, -, _
+      .replace(/[\s*_-]+$/, ''); // Trailing *, -, _
+
+    // Section header check (checking either trimmed or cleanedLine)
+    const sectionMatch = cleanedLine.match(/^SECTION\s+([A-Z0-9]+)[:\s]*(.*)$/i);
     if (sectionMatch) {
       inHeader = false;
       if (currentBlock) {
         sectionRawBlocks.push(currentBlock);
       }
       currentBlock = {
-        header: trimmed,
+        header: cleanedLine,
         contentLines: []
       };
       continue;
     }
 
     // Check footer
-    if (trimmed.startsWith('--- End of Worksheet') || trimmed.startsWith('=== DIGITAL COMPANION')) {
+    if (trimmed.startsWith('--- End of Worksheet') || trimmed.startsWith('=== DIGITAL COMPANION') || cleanedLine.startsWith('End of Worksheet')) {
       if (trimmed.startsWith('--- End of Worksheet')) {
         footer = trimmed;
       }
@@ -83,17 +88,21 @@ export function parseWorksheetText(text: string): WorksheetDocument {
     }
 
     if (inHeader) {
-      if (/^name:/i.test(trimmed)) {
+      if (/^name:/i.test(cleanedLine)) {
         studentInfo = trimmed;
-      } else if (/^worksheet topic:/i.test(trimmed)) {
-        topic = trimmed.replace(/^worksheet topic:\s*/i, '');
-      } else if (/^proficiency level:/i.test(trimmed)) {
-        level = trimmed.replace(/^proficiency level:\s*/i, '');
-      } else if (/^instructions?:/i.test(trimmed)) {
+      } else if (/^worksheet topic:/i.test(cleanedLine)) {
+        topic = cleanedLine.replace(/^worksheet topic:\s*/i, '');
+      } else if (/^proficiency level:/i.test(cleanedLine)) {
+        level = cleanedLine.replace(/^proficiency level:\s*/i, '');
+      } else if (/^instructions?:/i.test(cleanedLine)) {
         // Look ahead for instruction text
         const instLines: string[] = [];
         let j = i + 1;
-        while (j < lines.length && !/^SECTION\s+[A-Z0-9]+:/i.test(lines[j].trim())) {
+        while (j < lines.length) {
+          const nextCleaned = lines[j].trim().replace(/^[\s#*_-]+/, '').replace(/[\s*_-]+$/, '');
+          if (/^SECTION\s+[A-Z0-9]+:/i.test(nextCleaned)) {
+            break;
+          }
           if (lines[j].trim()) instLines.push(lines[j].trim());
           j++;
         }
@@ -109,6 +118,28 @@ export function parseWorksheetText(text: string): WorksheetDocument {
 
   if (currentBlock) {
     sectionRawBlocks.push(currentBlock);
+  }
+
+  // Fallback: If no section blocks were parsed, but there is content, group all content into a default section
+  if (sectionRawBlocks.length === 0 && text.trim()) {
+    const contentLines = lines.filter(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      const cleaned = trimmed.replace(/^[\s#*_-]+/, '').replace(/[\s*_-]+$/, '');
+      if (/^name:/i.test(cleaned)) return false;
+      if (/^worksheet topic:/i.test(cleaned)) return false;
+      if (/^proficiency level:/i.test(cleaned)) return false;
+      if (/^instructions?:/i.test(cleaned)) return false;
+      if (trimmed.startsWith('--- End of Worksheet')) return false;
+      return true;
+    });
+
+    if (contentLines.length > 0) {
+      sectionRawBlocks.push({
+        header: 'SECTION A: Exercises & Assessment Activities',
+        contentLines
+      });
+    }
   }
 
   // Parse each section block into title, instruction, and questions

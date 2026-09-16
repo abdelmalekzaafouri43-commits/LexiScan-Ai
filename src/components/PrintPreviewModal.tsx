@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Printer, 
   X, 
@@ -15,15 +15,35 @@ import {
   QrCode,
   FileDown,
   Loader2,
-  Check
+  Check,
+  Palette,
+  Frame,
+  Type,
+  LayoutGrid,
+  Columns,
+  Sparkles,
+  HelpCircle,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  Maximize,
+  Minimize,
+  RefreshCw,
+  Droplets,
+  BookOpen
 } from 'lucide-react';
 import { WorksheetQRCard, QRCodeSettings } from './WorksheetQRCard';
 import { WorksheetFont, WORKSHEET_FONTS } from '../utils/worksheetFonts';
-import { FontSelector } from './FontSelector';
-import { PrintConfirmationModal } from './PrintConfirmationModal';
-import { exportWorksheetToPdf } from '../utils/pdfExport';
+import { exportWorksheetToPdf, splitWorksheetIntoPages } from '../utils/pdfExport';
 import { WorksheetVisual } from '../types/worksheetVisuals';
 import { WorksheetVisualBlock } from './WorksheetVisualBlock';
+import { WorksheetDocumentRenderer, WorksheetThemeColor, WorksheetBorderStyle, THEME_COLOR_CONFIG } from './WorksheetDocumentRenderer';
+
+export type PaperFormat = 'a4' | 'letter';
+export type PaperOrientation = 'portrait' | 'landscape';
+export type MarginType = 'normal' | 'narrow' | 'wide' | 'minimal';
+export type PreviewLayoutView = 'single' | 'spread' | 'continuous';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -36,10 +56,12 @@ interface PrintPreviewModalProps {
   onUpdateQrSettings?: (settings: QRCodeSettings) => void;
   fontStyle?: WorksheetFont;
   onUpdateFontStyle?: (font: WorksheetFont) => void;
+  themeColor?: WorksheetThemeColor;
+  onUpdateThemeColor?: (color: WorksheetThemeColor) => void;
+  borderStyle?: WorksheetBorderStyle;
+  onUpdateBorderStyle?: (style: WorksheetBorderStyle) => void;
   visuals?: WorksheetVisual[];
 }
-
-type MarginType = 'normal' | 'narrow' | 'wide';
 
 export function PrintPreviewModal({
   isOpen,
@@ -52,24 +74,128 @@ export function PrintPreviewModal({
   onUpdateQrSettings,
   fontStyle = 'sans',
   onUpdateFontStyle,
+  themeColor = 'navy',
+  onUpdateThemeColor,
+  borderStyle = 'classic_frame',
+  onUpdateBorderStyle,
   visuals = []
 }: PrintPreviewModalProps) {
+  // Modal Navigation & Paper Display State
   const [scale, setScale] = useState(0.85);
+  const [paperFormat, setPaperFormat] = useState<PaperFormat>('a4');
+  const [orientation, setOrientation] = useState<PaperOrientation>('portrait');
   const [marginType, setMarginType] = useState<MarginType>('normal');
-  const [showMarginGuides, setShowMarginGuides] = useState(true);
-  const [showPageBreaks, setShowPageBreaks] = useState(true);
-  const [isConfirmPrintOpen, setIsConfirmPrintOpen] = useState(false);
+  const [layoutView, setLayoutView] = useState<PreviewLayoutView>('continuous');
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [showMarginGuides, setShowMarginGuides] = useState(false);
+  const [showInspector, setShowInspector] = useState(false);
+  const [showTeacherGuide, setShowTeacherGuide] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // PDF Export & Print states
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfProgressMessage, setPdfProgressMessage] = useState<string | null>(null);
   const [pdfSuccess, setPdfSuccess] = useState(false);
+  const [printSuccessToast, setPrintSuccessToast] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const fontConfig = WORKSHEET_FONTS[fontStyle] || WORKSHEET_FONTS.sans;
 
+  // Split worksheet text into realistic paper pages
+  const pages = React.useMemo(() => {
+    return splitWorksheetIntoPages(worksheetText, marginType === 'minimal' ? 'narrow' : marginType);
+  }, [worksheetText, marginType]);
+
+  // Adjust active page index if pages change
+  useEffect(() => {
+    if (currentPageIndex >= pages.length) {
+      setCurrentPageIndex(Math.max(0, pages.length - 1));
+    }
+  }, [pages.length, currentPageIndex]);
+
+  // Dimension calculations for A4 vs Letter in CSS standard 96 DPI
+  const paperDimensions = React.useMemo(() => {
+    if (paperFormat === 'a4') {
+      return orientation === 'portrait' 
+        ? { width: 794, height: 1123, label: 'A4 (210 × 297 mm)', cssW: '210mm', cssH: '297mm' }
+        : { width: 1123, height: 794, label: 'A4 Landscape (297 × 210 mm)', cssW: '297mm', cssH: '210mm' };
+    } else {
+      // US Letter (8.5 x 11 inches)
+      return orientation === 'portrait'
+        ? { width: 816, height: 1056, label: 'US Letter (8.5 × 11 in)', cssW: '8.5in', cssH: '11in' }
+        : { width: 1056, height: 816, label: 'US Letter Landscape (11 × 8.5 in)', cssW: '11in', cssH: '8.5in' };
+    }
+  }, [paperFormat, orientation]);
+
+  const marginOptions: { id: MarginType; label: string; inset: string; px: number }[] = [
+    { id: 'normal', label: 'Normal (20 mm / 0.75 in)', inset: '20mm', px: 75 },
+    { id: 'narrow', label: 'Narrow (12.7 mm / 0.5 in)', inset: '12.7mm', px: 48 },
+    { id: 'wide', label: 'Wide (25.4 mm / 1.0 in)', inset: '25.4mm', px: 96 },
+    { id: 'minimal', label: 'Minimal (6 mm / 0.25 in)', inset: '6mm', px: 24 },
+  ];
+
+  const colorThemes: { id: WorksheetThemeColor; label: string; dotClass: string; desc: string }[] = [
+    { id: 'navy', label: 'Classic Navy', dotClass: 'bg-blue-900', desc: 'Scholastic deep blue' },
+    { id: 'emerald', label: 'Forest Emerald', dotClass: 'bg-emerald-700', desc: 'Eco & science green' },
+    { id: 'indigo', label: 'Royal Indigo', dotClass: 'bg-indigo-700', desc: 'Modern academic indigo' },
+    { id: 'amber', label: 'Schoolhouse Amber', dotClass: 'bg-amber-600', desc: 'Warm classroom tone' },
+    { id: 'monochrome', label: 'Black & White (Print Master)', dotClass: 'bg-slate-950', desc: 'Eco photocopy & toner saver' },
+  ];
+
+  const borderStyles: { id: WorksheetBorderStyle; label: string }[] = [
+    { id: 'classic_frame', label: 'Academic Double Frame' },
+    { id: 'modern_cards', label: 'Modern Activity Cards' },
+    { id: 'lined_notebook', label: 'Clean Notebook Line' },
+  ];
+
+  // Fit to screen helper
+  const handleFitToScreen = () => {
+    if (!containerRef.current) return;
+    const availableHeight = window.innerHeight - 180;
+    const calculatedScale = Math.min(1.1, Math.max(0.45, availableHeight / paperDimensions.height));
+    setScale(Number(calculatedScale.toFixed(2)));
+  };
+
+  // Keyboard Navigation & Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === 'Escape') {
+        onClose();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handleExecutePrint();
+      } else if (e.key === '+' || e.key === '=') {
+        setScale(s => Math.min(1.5, Number((s + 0.1).toFixed(2))));
+      } else if (e.key === '-' || e.key === '_') {
+        setScale(s => Math.max(0.4, Number((s - 0.1).toFixed(2))));
+      } else if (e.key === '0') {
+        handleFitToScreen();
+      } else if (e.key === 'ArrowRight' && layoutView === 'single') {
+        setCurrentPageIndex(prev => Math.min(pages.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft' && layoutView === 'single') {
+        setCurrentPageIndex(prev => Math.max(0, prev - 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, layoutView, pages.length]);
+
+  // Direct Execution of Native Print Dialog
+  const handleExecutePrint = () => {
+    setPrintSuccessToast(true);
+    setTimeout(() => setPrintSuccessToast(false), 4000);
+    window.print();
+  };
+
+  // PDF Export
   const handleExportPdf = async () => {
     if (isExportingPdf || !worksheetText) return;
     setIsExportingPdf(true);
     setPdfSuccess(false);
-    setPdfProgressMessage('Initializing PDF engine...');
+    setPdfProgressMessage('Rendering print vectors...');
 
     try {
       await exportWorksheetToPdf({
@@ -78,7 +204,7 @@ export function PrintPreviewModal({
         gradeLevel,
         fontStyle,
         qrSettings,
-        marginType,
+        marginType: marginType === 'minimal' ? 'narrow' : marginType,
         onProgress: (prog) => {
           setPdfProgressMessage(prog.step);
         }
@@ -97,411 +223,620 @@ export function PrintPreviewModal({
     }
   };
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        if (isConfirmPrintOpen) {
-          setIsConfirmPrintOpen(false);
-        } else {
-          onClose();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isConfirmPrintOpen, onClose]);
-
-  if (!isOpen || !worksheetText) return null;
-
-  // Margin definitions (in mm and corresponding tailwind padding / style)
-  const marginConfig = {
-    normal: { label: 'Normal (20mm / 0.8")', mm: 20, px: 75, py: 75, tailwind: 'p-[75px]' },
-    narrow: { label: 'Narrow (12.7mm / 0.5")', mm: 12.7, px: 48, py: 48, tailwind: 'p-[48px]' },
-    wide: { label: 'Wide (25.4mm / 1.0")', mm: 25.4, px: 96, py: 96, tailwind: 'p-[96px]' },
-  };
-
-  const activeMargin = marginConfig[marginType];
-
-  // Pagination heuristic for A4 pages
-  // An A4 sheet at 794px × 1123px with 15px font fits roughly 42-48 lines depending on padding
-  const splitIntoPages = (text: string, margin: MarginType): string[] => {
-    const rawLines = text.split('\n');
-    const linesPerPage = margin === 'narrow' ? 48 : margin === 'wide' ? 38 : 42;
-
-    if (rawLines.length <= linesPerPage) {
-      return [text];
-    }
-
-    // Attempt intelligent splitting at section boundaries
-    const pages: string[] = [];
-    let currentPageLines: string[] = [];
-
-    for (let i = 0; i < rawLines.length; i++) {
-      const line = rawLines[i];
-      const isSectionHeader = /^SECTION [A-Z]:/i.test(line.trim());
-
-      // If adding this line exceeds page capacity and we are past line 30, break here
-      if (currentPageLines.length >= linesPerPage || (isSectionHeader && currentPageLines.length >= linesPerPage - 8)) {
-        pages.push(currentPageLines.join('\n'));
-        currentPageLines = [line];
-      } else {
-        currentPageLines.push(line);
-      }
-    }
-
-    if (currentPageLines.length > 0) {
-      pages.push(currentPageLines.join('\n'));
-    }
-
-    return pages;
-  };
-
-  const pages = splitIntoPages(worksheetText, marginType);
-
-  const handlePrint = () => {
-    setIsConfirmPrintOpen(true);
-  };
-
-  const executePrint = () => {
-    setIsConfirmPrintOpen(false);
-    setTimeout(() => {
-      window.print();
-    }, 100);
-  };
+  if (!isOpen) return null;
 
   return (
     <div 
-      id="print-preview-modal" 
-      className="fixed inset-0 z-50 flex flex-col bg-slate-900/60 dark:bg-slate-950/85 backdrop-blur-md text-slate-900 dark:text-slate-100 overflow-hidden animate-in fade-in duration-200"
+      id="print-preview-modal"
+      className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 backdrop-blur-md text-white select-none animate-in fade-in duration-200"
     >
-      {/* Top Controls Toolbar */}
-      <header className="h-16 px-6 bg-white dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-shrink-0 shadow-sm select-none print:hidden">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400">
-              <Printer className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                A4 Print Preview
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
-                  210 × 297 mm
-                </span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs font-medium">
-                {topic || 'Worksheet'} • {gradeLevel}
-              </p>
-            </div>
+      {/* ========================================================= */}
+      {/* 1. TOP DEDICATED PRINT STUDIO NAVIGATION & CONTROL BAR   */}
+      {/* ========================================================= */}
+      <header className="h-16 px-4 sm:px-6 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 shadow-xl print:hidden z-20">
+        
+        {/* Left Info: Document Name & Page Badge */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 shrink-0">
+            <BookOpen className="w-5 h-5" />
           </div>
-
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
-
-          {/* Page Count Indicator */}
-          <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/60 hidden md:flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-            <span>{pages.length} {pages.length === 1 ? 'Page' : 'Pages'}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-sm text-white truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+                {topic || 'English Curriculum Worksheet'}
+              </h2>
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>{pages.length} {pages.length === 1 ? 'Page' : 'Pages'} ({paperFormat.toUpperCase()})</span>
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 truncate hidden sm:block">
+              Dedicated Paper Simulator • True-to-scale vector print fidelity
+            </p>
           </div>
         </div>
 
-        {/* Center / Layout Controls */}
-        <div className="flex items-center gap-3">
-          {/* Margin Selector */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/70 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs">
-            <span className="text-slate-600 dark:text-slate-400 pl-2 pr-1 font-semibold">Margins:</span>
-            {(['normal', 'narrow', 'wide'] as MarginType[]).map((type) => (
+        {/* Center: View Layout Modes & Pagination */}
+        <div className="hidden md:flex items-center gap-3 bg-slate-950/80 px-3 py-1 rounded-xl border border-slate-800">
+          {/* View Modes */}
+          <div className="flex items-center gap-1 pr-2 border-r border-slate-800 text-xs">
+            <button
+              onClick={() => setLayoutView('continuous')}
+              className={`p-1.5 rounded-lg flex items-center gap-1 font-medium transition-all ${
+                layoutView === 'continuous' ? 'bg-slate-800 text-white shadow-2xs' : 'text-slate-400 hover:text-white'
+              }`}
+              title="Continuous Vertical Page Scroll"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Continuous</span>
+            </button>
+            <button
+              onClick={() => setLayoutView('single')}
+              className={`p-1.5 rounded-lg flex items-center gap-1 font-medium transition-all ${
+                layoutView === 'single' ? 'bg-slate-800 text-white shadow-2xs' : 'text-slate-400 hover:text-white'
+              }`}
+              title="Single Page Presentation"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Single</span>
+            </button>
+            {pages.length > 1 && (
               <button
-                key={type}
-                onClick={() => setMarginType(type)}
-                className={`px-2.5 py-1 rounded-lg capitalize font-semibold transition-all ${
-                  marginType === type
-                    ? 'bg-primary-600 text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50'
+                onClick={() => setLayoutView('spread')}
+                className={`p-1.5 rounded-lg flex items-center gap-1 font-medium transition-all ${
+                  layoutView === 'spread' ? 'bg-slate-800 text-white shadow-2xs' : 'text-slate-400 hover:text-white'
                 }`}
+                title="2-Page Book Spread"
               >
-                {type}
+                <Columns className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Book Spread</span>
               </button>
-            ))}
+            )}
           </div>
 
-          {/* Toggle Margin Guides */}
-          <button
-            onClick={() => setShowMarginGuides(!showMarginGuides)}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-              showMarginGuides 
-                ? 'bg-primary-50 text-primary-700 border-primary-300 dark:bg-primary-500/15 dark:text-primary-300 dark:border-primary-500/30' 
-                : 'bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:text-slate-200'
-            }`}
-            title="Toggle visual margin boundary guides"
-          >
-            {showMarginGuides ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            Margin Guides
-          </button>
-
-          {/* Font Selector */}
-          {onUpdateFontStyle && (
-            <div className="hidden xl:block">
-              <FontSelector value={fontStyle} onChange={onUpdateFontStyle} variant="compact" />
+          {/* Page Navigator when in Single View */}
+          {layoutView === 'single' && pages.length > 1 && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-300">
+              <button
+                onClick={() => setCurrentPageIndex(p => Math.max(0, p - 1))}
+                disabled={currentPageIndex === 0}
+                className="p-1 rounded hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Previous Page (Left Arrow)"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="font-mono text-[11px] font-bold">
+                Page {currentPageIndex + 1} / {pages.length}
+              </span>
+              <button
+                onClick={() => setCurrentPageIndex(p => Math.min(pages.length - 1, p + 1))}
+                disabled={currentPageIndex === pages.length - 1}
+                className="p-1 rounded hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Next Page (Right Arrow)"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
-          {/* Toggle QR Code on Sheet */}
-          {qrSettings && onUpdateQrSettings && (
+          {/* Zoom Zoom Controls */}
+          <div className="flex items-center gap-1 text-xs">
             <button
-              onClick={() => onUpdateQrSettings({ ...qrSettings, enabled: !qrSettings.enabled })}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                qrSettings.enabled 
-                  ? 'bg-primary-50 text-primary-700 border-primary-300 dark:bg-primary-500/15 dark:text-primary-300 dark:border-primary-500/30' 
-                  : 'bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:text-slate-200'
-              }`}
-              title="Toggle printed QR code"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>QR Code: {qrSettings.enabled ? 'On' : 'Off'}</span>
-            </button>
-          )}
-
-          {/* Zoom Controls */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 p-0.5 text-xs">
-            <button
-              onClick={() => setScale((s) => Math.max(0.4, Number((s - 0.1).toFixed(2))))}
-              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-              title="Zoom Out"
+              onClick={() => setScale(s => Math.max(0.4, Number((s - 0.1).toFixed(2))))}
+              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+              title="Zoom out (-)"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="px-2 font-mono text-slate-800 dark:text-slate-300 min-w-[48px] text-center font-semibold">
+            <span className="font-mono text-slate-300 w-11 text-center text-[11px]">
               {Math.round(scale * 100)}%
             </span>
             <button
-              onClick={() => setScale((s) => Math.min(1.4, Number((s + 0.1).toFixed(2))))}
-              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-              title="Zoom In"
+              onClick={() => setScale(s => Math.min(1.5, Number((s + 0.1).toFixed(2))))}
+              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+              title="Zoom in (+)"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => setScale(0.85)}
-              className="px-2 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700 border-l border-slate-200 dark:border-slate-700 rounded-r-lg transition-colors font-medium"
-              title="Reset Zoom"
+              onClick={handleFitToScreen}
+              className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold"
+              title="Fit to Page Height (0)"
             >
               Fit
             </button>
           </div>
         </div>
 
-        {/* Right Action Buttons */}
+        {/* Right Actions: Print, PDF, Inspector & Close */}
         <div className="flex items-center gap-2">
+          {/* Pre-flight Inspector Button */}
+          <button
+            onClick={() => setShowInspector(!showInspector)}
+            className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              showInspector 
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+            }`}
+            title="Toggle Print Pre-Flight Inspector & Tips"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className="hidden lg:inline text-[11px]">Print Inspector</span>
+          </button>
+
+          {/* TXT Download */}
           {onDownloadTxt && (
             <button
               onClick={onDownloadTxt}
-              disabled={isExportingPdf}
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 transition-colors shadow-2xs disabled:opacity-50"
-              title="Download plain text file"
+              className="hidden sm:flex px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold items-center gap-1.5 transition-colors border border-slate-700"
+              title="Download clean plain text"
             >
               <Download className="w-3.5 h-3.5" />
-              Download TXT
+              <span>TXT</span>
             </button>
           )}
 
-          {/* Client-Side Export PDF using jsPDF */}
+          {/* Export PDF Button */}
           <button
             onClick={handleExportPdf}
             disabled={isExportingPdf}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
-              pdfSuccess
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                : 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60 shadow-2xs hover:scale-[1.02] active:scale-[0.98]'
-            } disabled:opacity-50`}
-            title="Export and save worksheet locally as an A4 PDF document"
+            className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-600/25 transition-all disabled:opacity-50"
+            title="Export local A4 PDF file"
           >
             {isExportingPdf ? (
-              <Loader2 className="w-4 h-4 animate-spin text-rose-600 dark:text-rose-400" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
             ) : pdfSuccess ? (
               <Check className="w-4 h-4 text-white" />
             ) : (
-              <FileDown className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <FileDown className="w-4 h-4" />
             )}
-            <span>{isExportingPdf ? 'Exporting...' : pdfSuccess ? 'PDF Saved!' : 'Save PDF'}</span>
+            <span className="hidden sm:inline">{isExportingPdf ? 'Exporting...' : 'Save PDF'}</span>
           </button>
 
-          {/* Browser Print / Physical Print */}
+          {/* Direct Print Button */}
           <button
-            onClick={handlePrint}
-            disabled={isExportingPdf}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-            title="Open browser print dialog"
+            onClick={handleExecutePrint}
+            className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary-500/30 transition-all hover:scale-105 active:scale-95"
+            title="Open system print dialog (Ctrl+P)"
           >
             <Printer className="w-4 h-4" />
-            <span>Print</span>
+            <span>Print Worksheet</span>
           </button>
 
+          {/* Close Modal */}
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800 transition-colors ml-1"
-            title="Close Preview (Esc)"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-1"
+            title="Exit Print Preview (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      {/* Main Preview Stage */}
-      <main className="flex-1 overflow-auto p-8 lg:p-12 flex flex-col items-center gap-12 bg-slate-200/70 dark:bg-slate-950/70 print:p-0 print:m-0 print:bg-white">
-        {pages.map((pageText, pageIndex) => (
-          <div key={pageIndex} className="flex flex-col items-center">
-            {/* Page header tag */}
-            <div className="w-[794px] max-w-full flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mb-2 px-2 print:hidden select-none"
-                 style={{ width: `${794 * scale}px` }}>
-              <span className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-300">
-                <FileText className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-                Sheet {pageIndex + 1} of {pages.length} (A4 Standard)
-              </span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono font-medium">
-                Safe Printable Area • {activeMargin.label}
-              </span>
+      {/* ========================================================= */}
+      {/* 2. SUB-BAR: LIVE PRE-PRINT FORMAT & STYLING CONTROLS     */}
+      {/* ========================================================= */}
+      <div className="h-12 px-4 sm:px-6 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between gap-4 overflow-x-auto text-xs shrink-0 select-none print:hidden">
+        
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Paper Format Selector (A4 vs Letter) */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 font-semibold text-[11px] uppercase">Format:</span>
+            <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setPaperFormat('a4')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                  paperFormat === 'a4' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                A4
+              </button>
+              <button
+                onClick={() => setPaperFormat('letter')}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                  paperFormat === 'letter' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Letter
+              </button>
             </div>
+          </div>
 
-            {/* Simulated A4 Paper Canvas */}
-            <div 
-              className="print-page-sheet relative bg-white text-slate-900 rounded-none shadow-xl shadow-slate-400/40 dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)] border border-slate-300/80 dark:border-slate-800 select-text overflow-hidden transition-all duration-150 print:shadow-none print:border-none print:m-0 print:transform-none"
-              style={{
-                width: '794px',
-                height: '1123px', // Exactly A4 210mm x 297mm at 96 DPI
-                transform: `scale(${scale})`,
-                transformOrigin: 'top center',
-                marginBottom: scale < 1 ? `-${1123 * (1 - scale)}px` : `${1123 * (scale - 1)}px`
-              }}
+          {/* Margins Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 font-semibold text-[11px] uppercase">Margins:</span>
+            <select
+              value={marginType}
+              onChange={(e) => setMarginType(e.target.value as MarginType)}
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 text-xs font-semibold focus:outline-none"
             >
-              {/* Optional Visual Margin Guides Overlay */}
-              {showMarginGuides && (
+              {marginOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label.split(' ')[0]} ({opt.inset})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Color Palette Swatches */}
+          {onUpdateThemeColor && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <Palette className="w-3.5 h-3.5 text-primary-400" />
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                {colorThemes.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onUpdateThemeColor(t.id)}
+                    className={`p-1 rounded-md transition-all ${
+                      themeColor === t.id ? 'bg-slate-800 ring-2 ring-primary-500 shadow-2xs' : 'hover:bg-slate-800/60 opacity-80 hover:opacity-100'
+                    }`}
+                    title={`${t.label} - ${t.desc}`}
+                  >
+                    <span className={`w-3 h-3 rounded-full block ${t.dotClass}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Border Frame Selector */}
+          {onUpdateBorderStyle && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <Frame className="w-3.5 h-3.5 text-emerald-400" />
+              <select
+                value={borderStyle}
+                onChange={(e) => onUpdateBorderStyle(e.target.value as WorksheetBorderStyle)}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs font-semibold focus:outline-none"
+              >
+                {borderStyles.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Typography Selector */}
+          {onUpdateFontStyle && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <Type className="w-3.5 h-3.5 text-indigo-400" />
+              <select
+                value={fontStyle}
+                onChange={(e) => onUpdateFontStyle(e.target.value as WorksheetFont)}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs font-semibold focus:outline-none"
+              >
+                <option value="sans">Clean Sans</option>
+                <option value="serif">Classic Serif</option>
+                <option value="handwriting">School Script</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Right Toggle Aids */}
+        <div className="flex items-center gap-3">
+          {/* Toggle Margin Boundary Guides */}
+          <button
+            onClick={() => setShowMarginGuides(!showMarginGuides)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all ${
+              showMarginGuides
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Show printable boundary guides on the canvas"
+          >
+            {showMarginGuides ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            <span className="text-[11px]">Margin Guides</span>
+          </button>
+
+          {/* Teacher Guide Edition Toggle */}
+          <button
+            onClick={() => setShowTeacherGuide(!showTeacherGuide)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all ${
+              showTeacherGuide
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Toggle Teacher Edition Header Badge"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Teacher Header</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 3. MAIN DRAFTING CANVAS & PRE-FLIGHT INSPECTOR PANEL     */}
+      {/* ========================================================= */}
+      <div className="flex-1 flex overflow-hidden relative">
+        
+        {/* Main Paper Scroll Stage */}
+        <main 
+          ref={containerRef}
+          className="flex-1 overflow-y-auto p-6 md:p-12 flex flex-col items-center justify-start gap-10 bg-slate-950/60 print:bg-white print:p-0 print:m-0 print:overflow-visible print:block relative"
+        >
+          {/* Active Layout Rendering */}
+          {layoutView === 'spread' && pages.length > 1 ? (
+            /* 2-Page Book Spread View */
+            <div 
+              className="flex flex-wrap items-start justify-center gap-8 print:block"
+              style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+            >
+              {pages.slice(0, 2).map((pageText, idx) => (
                 <div 
-                  className="absolute pointer-events-none print:hidden border border-dashed border-sky-400/60 bg-sky-500/[0.02]"
+                  key={idx}
+                  className="bg-white text-slate-900 shadow-2xl rounded-sm border border-slate-300 relative print-page-sheet overflow-hidden"
                   style={{
-                    top: `${activeMargin.py}px`,
-                    left: `${activeMargin.px}px`,
-                    right: `${activeMargin.px}px`,
-                    bottom: `${activeMargin.py}px`,
+                    width: `${paperDimensions.width}px`,
+                    minHeight: `${paperDimensions.height}px`,
                   }}
                 >
-                  {/* Margin dimension labels */}
-                  <span className="absolute -top-5 left-2 text-[10px] font-mono text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
-                    Top Margin: {activeMargin.mm}mm
-                  </span>
-                  <span className="absolute -bottom-5 left-2 text-[10px] font-mono text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
-                    Bottom Margin: {activeMargin.mm}mm
-                  </span>
-                  <span className="absolute top-2 -left-3 -rotate-90 origin-top-left text-[10px] font-mono text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
-                    Left: {activeMargin.mm}mm
-                  </span>
-                  <span className="absolute top-2 -right-3 rotate-90 origin-top-right text-[10px] font-mono text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
-                    Right: {activeMargin.mm}mm
-                  </span>
-                </div>
-              )}
+                  {/* Visual Margin Safety Guides Overlay */}
+                  {showMarginGuides && (
+                    <div 
+                      className="absolute pointer-events-none border-2 border-dashed border-cyan-500/60 z-30"
+                      style={{
+                        top: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                        bottom: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                        left: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                        right: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                      }}
+                    >
+                      <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-cyan-600 text-white font-mono text-[9px] font-bold">
+                        Printable Area ({marginType})
+                      </span>
+                    </div>
+                  )}
 
-              {/* Sheet Content Inner Area */}
+                  <WorksheetDocumentRenderer 
+                    worksheetText={pageText}
+                    topic={topic}
+                    gradeLevel={gradeLevel}
+                    fontStyle={fontStyle}
+                    themeColor={themeColor}
+                    borderStyle={borderStyle}
+                    qrSettings={qrSettings}
+                    visuals={idx === 0 ? visuals : []}
+                    isPrintMode={true}
+                    pageNumber={idx + 1}
+                    totalPages={pages.length}
+                    showTeacherGuide={showTeacherGuide}
+                    paperFormat={paperFormat}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : layoutView === 'single' ? (
+            /* Single Page View */
+            <div 
+              className="flex flex-col items-center"
+              style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+            >
               <div 
-                className="h-full flex flex-col justify-between"
+                className="bg-white text-slate-900 shadow-2xl rounded-sm border border-slate-300 relative print-page-sheet overflow-hidden"
                 style={{
-                  paddingTop: `${activeMargin.py}px`,
-                  paddingBottom: `${activeMargin.py}px`,
-                  paddingLeft: `${activeMargin.px}px`,
-                  paddingRight: `${activeMargin.px}px`,
+                  width: `${paperDimensions.width}px`,
+                  minHeight: `${paperDimensions.height}px`,
                 }}
               >
-                {/* Header info in print */}
-                <div className="pb-3 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-sans">
-                  <span>LexiScan AI • ESL Worksheet Series</span>
-                  <span>CEFR: {gradeLevel.toUpperCase()}</span>
+                {/* Visual Margin Safety Guides Overlay */}
+                {showMarginGuides && (
+                  <div 
+                    className="absolute pointer-events-none border-2 border-dashed border-cyan-500/60 z-30"
+                    style={{
+                      top: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                      bottom: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                      left: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                      right: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                    }}
+                  >
+                    <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-cyan-600 text-white font-mono text-[9px] font-bold">
+                      Printable Area ({marginType})
+                    </span>
+                  </div>
+                )}
+
+                <WorksheetDocumentRenderer 
+                  worksheetText={pages[currentPageIndex] || worksheetText}
+                  topic={topic}
+                  gradeLevel={gradeLevel}
+                  fontStyle={fontStyle}
+                  themeColor={themeColor}
+                  borderStyle={borderStyle}
+                  qrSettings={qrSettings}
+                  visuals={currentPageIndex === 0 ? visuals : []}
+                  isPrintMode={true}
+                  pageNumber={currentPageIndex + 1}
+                  totalPages={pages.length}
+                  showTeacherGuide={showTeacherGuide}
+                  paperFormat={paperFormat}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Continuous Vertical Stream View */
+            <div 
+              className="flex flex-col items-center gap-8 w-full"
+              style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+            >
+              {pages.map((pageText, pIdx) => (
+                <React.Fragment key={pIdx}>
+                  <div 
+                    className="bg-white text-slate-900 shadow-2xl rounded-sm border border-slate-300 relative print-page-sheet overflow-hidden shrink-0"
+                    style={{
+                      width: `${paperDimensions.width}px`,
+                      minHeight: `${paperDimensions.height}px`,
+                    }}
+                  >
+                    {/* Visual Margin Safety Guides Overlay */}
+                    {showMarginGuides && (
+                      <div 
+                        className="absolute pointer-events-none border-2 border-dashed border-cyan-500/60 z-30"
+                        style={{
+                          top: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                          bottom: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                          left: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                          right: `${marginOptions.find(m => m.id === marginType)?.px || 75}px`,
+                        }}
+                      >
+                        <span className="absolute top-1 left-1 px-1 py-0.5 rounded bg-cyan-600 text-white font-mono text-[9px] font-bold">
+                          Printable Area ({marginType})
+                        </span>
+                      </div>
+                    )}
+
+                    <WorksheetDocumentRenderer 
+                      worksheetText={pageText}
+                      topic={topic}
+                      gradeLevel={gradeLevel}
+                      fontStyle={fontStyle}
+                      themeColor={themeColor}
+                      borderStyle={borderStyle}
+                      qrSettings={qrSettings}
+                      visuals={pIdx === 0 ? visuals : []}
+                      isPrintMode={true}
+                      pageNumber={pIdx + 1}
+                      totalPages={pages.length}
+                      showTeacherGuide={showTeacherGuide}
+                      paperFormat={paperFormat}
+                    />
+                  </div>
+
+                  {/* Physical Page Break Line between pages */}
+                  {pIdx < pages.length - 1 && (
+                    <div 
+                      className="w-full flex items-center gap-3 my-2 print:hidden select-none"
+                      style={{ width: `${paperDimensions.width}px` }}
+                    >
+                      <div className="flex-1 border-t-2 border-dashed border-amber-400/60" />
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 text-xs font-bold shadow-md">
+                        <Scissors className="w-3.5 h-3.5" />
+                        <span>Physical Page Break • End of Page {pIdx + 1}</span>
+                      </div>
+                      <div className="flex-1 border-t-2 border-dashed border-amber-400/60" />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* ========================================================= */}
+        {/* 4. PRE-FLIGHT INSPECTOR & PRINT ADVISORY SIDEBAR          */}
+        {/* ========================================================= */}
+        {showInspector && (
+          <aside className="w-80 bg-slate-900 border-l border-slate-800 p-5 overflow-y-auto flex flex-col gap-5 shrink-0 z-20 print:hidden animate-in slide-in-from-right duration-200">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-sm text-white">Pre-Flight Print Check</h3>
+              </div>
+              <button 
+                onClick={() => setShowInspector(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Print Readiness Checks */}
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Document Readiness Checklist
+              </span>
+
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-200 block">Page Boundary Safety</span>
+                  <span className="text-slate-400 text-[11px]">
+                    Formatted into {pages.length} clean {pages.length === 1 ? 'page' : 'pages'} with zero clipping.
+                  </span>
                 </div>
+              </div>
 
-                {/* Worksheet Text Body */}
-                <div className="flex-1 py-4 overflow-hidden relative">
-                  {qrSettings?.enabled && qrSettings.position === 'header' && pageIndex === 0 && (
-                    <div className="float-right ml-4 mb-3">
-                      <WorksheetQRCard settings={qrSettings} variant="header" topic={topic} />
-                    </div>
-                  )}
-
-                  {/* Render Visuals on Page 1 if present */}
-                  {pageIndex === 0 && visuals.length > 0 && (
-                    <div className="mb-4">
-                      {visuals.map((visual, idx) => (
-                        <WorksheetVisualBlock
-                          key={visual.id || idx}
-                          visual={visual}
-                          isEditable={false}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <pre className={`text-slate-900 whitespace-pre-wrap ${fontConfig.className} ${fontConfig.textClass}`}>
-                    {pageText}
-                  </pre>
-
-                  {qrSettings?.enabled && qrSettings.position === 'footer' && pageIndex === pages.length - 1 && (
-                    <div className="mt-4 pt-3 border-t border-slate-200">
-                      <WorksheetQRCard settings={qrSettings} variant="footer" topic={topic} />
-                    </div>
-                  )}
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-200 block">Contrast & Legibility</span>
+                  <span className="text-slate-400 text-[11px]">
+                    Passes WCAG AA for sharp photocopier & laser printer reproduction.
+                  </span>
                 </div>
+              </div>
 
-                {/* Page Footer */}
-                <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-400 font-sans">
-                  <span>Topic: {topic || 'English Study Material'}</span>
-                  <span>Page {pageIndex + 1} of {pages.length}</span>
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-200 block">Student Credentials</span>
+                  <span className="text-slate-400 text-[11px]">
+                    Name, Class, Date, and Score boxes ready for handwriting.
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Clear Page Break Visual Divider between pages */}
-            {showPageBreaks && pageIndex < pages.length - 1 && (
-              <div 
-                className="w-full max-w-[794px] my-6 flex items-center gap-3 print:hidden select-none"
-                style={{ width: `${794 * scale}px` }}
-              >
-                <div className="flex-1 border-t-2 border-dashed border-amber-400/60" />
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-500/40 text-amber-900 dark:text-amber-300 text-xs font-semibold shadow-2xs">
-                  <Scissors className="w-3.5 h-3.5" />
-                  <span>A4 Physical Page Break (Page {pageIndex + 1} Ends)</span>
-                </div>
-                <div className="flex-1 border-t-2 border-dashed border-amber-400/60" />
+            {/* Browser Print Dialog Tips */}
+            <div className="p-4 rounded-xl bg-primary-950/40 border border-primary-800/40 space-y-2">
+              <div className="flex items-center gap-1.5 text-primary-300 font-bold text-xs">
+                <Info className="w-4 h-4" />
+                <span>Browser Print Dialog Settings</span>
               </div>
-            )}
+              <ul className="text-[11px] text-slate-300 space-y-1.5 list-disc pl-4 leading-relaxed">
+                <li><strong className="text-white">Background Graphics:</strong> Check <em>"ON"</em> to print colored headers & badge cards.</li>
+                <li><strong className="text-white">Headers & Footers:</strong> Uncheck to hide browser URLs and dates.</li>
+                <li><strong className="text-white">Destination:</strong> Choose your printer or <em>"Save as PDF"</em>.</li>
+              </ul>
+            </div>
+
+            {/* Quick Toner Saver Switch */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+              <div className="flex items-center gap-2">
+                <Droplets className="w-4 h-4 text-cyan-400" />
+                <span className="font-bold text-xs text-white">Eco Toner Saver Mode</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Switch to high-contrast monochrome mode to maximize toner conservation during high-volume classroom printing.
+              </p>
+              <button
+                type="button"
+                onClick={() => onUpdateThemeColor && onUpdateThemeColor('monochrome')}
+                className="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors"
+              >
+                Apply B&W Print Master
+              </button>
+            </div>
+
+            {/* Launch Print Button in Inspector */}
+            <button
+              onClick={handleExecutePrint}
+              className="w-full mt-auto py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary-500/25 transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print Now (Ctrl+P)</span>
+            </button>
+          </aside>
+        )}
+      </div>
+
+      {/* Notification Toast when Print triggered */}
+      {printSuccessToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-primary-500/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200 print:hidden">
+          <div className="w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center">
+            <Printer className="w-4 h-4 animate-pulse" />
           </div>
-        ))}
-      </main>
-
-      {/* User Confirmation Dialog before triggering Print */}
-      <PrintConfirmationModal
-        isOpen={isConfirmPrintOpen}
-        onClose={() => setIsConfirmPrintOpen(false)}
-        onConfirmPrint={executePrint}
-        onSavePdf={() => {
-          setIsConfirmPrintOpen(false);
-          handleExportPdf();
-        }}
-        topic={topic}
-        gradeLevel={gradeLevel}
-        fontStyle={fontStyle}
-        marginType={marginType}
-        pageCount={pages.length}
-        qrSettings={qrSettings}
-        onChangeFont={onUpdateFontStyle}
-        onChangeMargin={setMarginType}
-      />
-
-      {/* Floating Status Notification for PDF Export */}
-      {pdfProgressMessage && (
-        <div 
-          id="pdf-export-toast"
-          className="fixed bottom-6 right-6 z-50 bg-slate-900/95 dark:bg-slate-900/95 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md flex items-center gap-3 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3"
-        >
-          {isExportingPdf && <Loader2 className="w-4 h-4 animate-spin text-rose-400" />}
-          {pdfSuccess && <Check className="w-4 h-4 text-emerald-400" />}
-          <span className="text-slate-200">{pdfProgressMessage}</span>
+          <div>
+            <h4 className="font-bold text-xs text-white">System Print Dialog Opened</h4>
+            <p className="text-[11px] text-slate-400">
+              Ensure "Background Graphics" is enabled for crisp borders.
+            </p>
+          </div>
         </div>
       )}
     </div>

@@ -16,7 +16,9 @@ import {
   LayoutList,
   Move,
   Layers,
-  LayoutTemplate
+  LayoutTemplate,
+  ArrowRight,
+  Sliders
 } from 'lucide-react';
 import { PrintPreviewModal } from './PrintPreviewModal';
 import { WorksheetQRCard, QRCodeSettings } from './WorksheetQRCard';
@@ -36,6 +38,12 @@ import { getCuratedVisualForTopic, createMatchingVisualBank } from '../utils/cur
 import { WorksheetVisualBlock } from './WorksheetVisualBlock';
 import { VisualsManagerModal } from './VisualsManagerModal';
 import { WorksheetSkeletonLoader } from './WorksheetSkeletonLoader';
+import { ThemeExplorerBar } from './ThemeExplorerBar';
+import { CurriculumThemeSelector } from './CurriculumThemeSelector';
+import { WorksheetThemeItem } from '../utils/worksheetThemes';
+import { WorksheetDocumentRenderer, WorksheetThemeColor, WorksheetBorderStyle } from './WorksheetDocumentRenderer';
+import { WorksheetStyleToolbar } from './WorksheetStyleToolbar';
+import { TemplatePreloadData } from '../types';
 import { Image as ImageIcon, Palette, UploadCloud, FileUp } from 'lucide-react';
 
 export interface WorksheetGeneratorProps {
@@ -45,12 +53,16 @@ export interface WorksheetGeneratorProps {
     metadata: { topic: string; gradeLevel: string; layoutTitle: string };
   } | null;
   onClearScannedLayout?: () => void;
+  templatePreloadData?: TemplatePreloadData | null;
+  onClearTemplatePreload?: () => void;
   onNavigateToScanner?: () => void;
 }
 
 export function WorksheetGenerator({
   scannedLayoutData,
   onClearScannedLayout,
+  templatePreloadData,
+  onClearTemplatePreload,
   onNavigateToScanner,
 }: WorksheetGeneratorProps = {}) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -76,6 +88,20 @@ export function WorksheetGenerator({
 
   const [activeCustomPrompt, setActiveCustomPrompt] = useState<string | null>(null);
   const [customLayoutTitle, setCustomLayoutTitle] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<'config' | 'preview'>('config');
+  const [highlightPreview, setHighlightPreview] = useState(false);
+  const previewContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  const focusPreviewCanvas = () => {
+    setMobileTab('preview');
+    setHighlightPreview(true);
+    setTimeout(() => {
+      setHighlightPreview(false);
+    }, 2500);
+    if (previewContainerRef.current) {
+      previewContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfProgressText, setPdfProgressText] = useState<string | null>(null);
@@ -84,9 +110,60 @@ export function WorksheetGenerator({
   const [topic, setTopic] = useState('Kitchen & Cooking');
   const [gradeLevel, setGradeLevel] = useState('beginner (A1-A2)');
   const [fontStyle, setFontStyle] = useState<WorksheetFont>('sans');
+  const [themeColor, setThemeColor] = useState<WorksheetThemeColor>('navy');
+  const [borderStyle, setBorderStyle] = useState<WorksheetBorderStyle>('classic_frame');
+  const [marginSize, setMarginSize] = useState<'compact' | 'normal' | 'spacious'>('normal');
 
   const fontConfig = WORKSHEET_FONTS[fontStyle] || WORKSHEET_FONTS.sans;
   const activeTemplate = WORKSHEET_TEMPLATES[selectedTemplate] || WORKSHEET_TEMPLATES.vocab_matching;
+
+  // React to incoming template preload from Dashboard
+  useEffect(() => {
+    if (templatePreloadData && templatePreloadData.templateId) {
+      const tplId = templatePreloadData.templateId;
+      const tpl = WORKSHEET_TEMPLATES[tplId];
+      if (tpl) {
+        setSelectedTemplate(tplId);
+        setActiveCustomPrompt(null);
+        setCustomLayoutTitle(null);
+
+        const targetTopic = templatePreloadData.topic || tpl.suggestedTopics[0] || 'English Language Skills';
+        const targetLevel = templatePreloadData.gradeLevel || 'intermediate (B1-B2)';
+
+        setTopic(targetTopic);
+        setGradeLevel(targetLevel);
+
+        // Apply theme color based on template category
+        if (tplId === 'grammar_exercise') {
+          setThemeColor('emerald');
+        } else if (tplId === 'reading_comprehension') {
+          setThemeColor('navy');
+        } else if (tplId === 'vocab_matching') {
+          setThemeColor('indigo');
+        } else if (tplId === 'quiz') {
+          setThemeColor('amber');
+        }
+
+        // Apply curated visual for topic
+        if (includeVisuals) {
+          const vis = getCuratedVisualForTopic(targetTopic, visualStyle);
+          setVisuals(vis ? [vis] : []);
+        }
+
+        // Preload sample worksheet if requested
+        if (templatePreloadData.autoLoadSample) {
+          const sample = tpl.sampleGenerator(targetTopic, targetLevel);
+          setWorksheet(sample);
+          setPreviewMode('builder');
+          setGenerationNotice(`Pre-filled generator settings with "${tpl.name}" template.`);
+        }
+
+        if (onClearTemplatePreload) {
+          onClearTemplatePreload();
+        }
+      }
+    }
+  }, [templatePreloadData, onClearTemplatePreload, includeVisuals, visualStyle]);
 
   // React to incoming scanned prompt blueprint from Layout Scanner
   useEffect(() => {
@@ -138,6 +215,41 @@ export function WorksheetGenerator({
         ? `https://quizlet.com/search?query=${encodeURIComponent(themeName)}&type=sets`
         : `https://learnenglish.britishcouncil.org/search?keywords=${encodeURIComponent(themeName)}`
     }));
+  };
+
+  const handleApplyCurriculumTheme = (themeItem: WorksheetThemeItem) => {
+    setTopic(themeItem.name);
+    // Construct rich prompt guidance incorporating key vocabulary and grammar focus
+    const enrichedPrompt = `Focus strictly on the pedagogical theme: "${themeItem.name}" (${themeItem.category}).
+Key Target Vocabulary to include: ${themeItem.keyVocabulary.join(', ')}.
+Grammar & Linguistic Focus: ${themeItem.suggestedGrammar}.
+Context & Reading Snippet: ${themeItem.sampleReadingSnippet}.
+Instructional Goal: ${themeItem.suggestedPrompt}`;
+    setActiveCustomPrompt(enrichedPrompt);
+    setCustomLayoutTitle(`${themeItem.name} (${themeItem.category})`);
+
+    if (includeVisuals) {
+      if (selectedTemplate === 'vocab_matching') {
+        const matchingBank = createMatchingVisualBank(themeItem.name);
+        if (matchingBank) {
+          setVisuals([matchingBank]);
+        } else {
+          const vis = getCuratedVisualForTopic(themeItem.name, visualStyle);
+          setVisuals(vis ? [vis] : []);
+        }
+      } else {
+        const vis = getCuratedVisualForTopic(themeItem.name, visualStyle);
+        setVisuals(vis ? [vis] : []);
+      }
+    }
+
+    setQrSettings(prev => ({
+      ...prev,
+      title: `${themeItem.name} • Audio & Exercises`,
+      url: `https://learnenglish.britishcouncil.org/search?keywords=${encodeURIComponent(themeItem.name)}`
+    }));
+
+    setGenerationNotice(`Selected Theme: "${themeItem.name}" • Target vocabulary (${themeItem.keyVocabulary.slice(0, 4).join(', ')}...) & grammar loaded`);
   };
 
   const handleSelectTemplate = (templateId: WorksheetTemplateId, autoLoadSample: boolean = false) => {
@@ -231,6 +343,7 @@ export function WorksheetGenerator({
         } else {
           setGenerationNotice(`Generated with "${activeTemplate.name}" layout`);
         }
+        focusPreviewCanvas();
       } else {
         setErrorMessage(data.error || data.details || 'Unable to generate worksheet. Please try again.');
       }
@@ -246,6 +359,7 @@ export function WorksheetGenerator({
         if (autoVis) setVisuals([autoVis]);
       }
       setGenerationNotice(`Generated structured "${activeTemplate.name}" worksheet (Static Engine)`);
+      focusPreviewCanvas();
     } finally {
       setIsGenerating(false);
     }
@@ -259,6 +373,7 @@ export function WorksheetGenerator({
     setWorksheet(sample);
     setPreviewMode('builder');
     setGenerationNotice(`Loaded "${activeTemplate.name}" structure • Ready for Drag-and-Drop Reordering`);
+    focusPreviewCanvas();
   };
 
   const getExportText = () => {
@@ -363,15 +478,60 @@ export function WorksheetGenerator({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 p-8 h-[calc(100vh-5rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-5rem)] p-4 sm:p-6 lg:p-8 overflow-hidden">
       
-      {/* Left Column: Controls */}
-      <div className="w-full lg:w-1/3 flex flex-col gap-6 overflow-y-auto pr-2 pb-8">
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            Generation Parameters
-          </h3>
+      {/* Mobile/Tablet Screen Switcher (visible on < lg screens) */}
+      <div className="lg:hidden flex items-center p-1 bg-slate-200/80 dark:bg-slate-800/80 rounded-xl mb-4 border border-slate-300 dark:border-slate-700 shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab('config')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            mobileTab === 'config'
+              ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>1. Setup & Parameters</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
+            mobileTab === 'preview'
+              ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>2. Live Worksheet Preview</span>
+          {worksheet ? (
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              Ready
+            </span>
+          ) : (
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          )}
+        </button>
+      </div>
+
+      {/* Main Two-Column Viewport */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 flex-1 overflow-hidden">
+        
+        {/* Left Column: Controls */}
+        <div className={`w-full lg:w-1/3 flex flex-col gap-6 overflow-y-auto pr-1 pb-8 ${
+          mobileTab === 'config' ? 'flex' : 'hidden lg:flex'
+        }`}>
+          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                Generation Parameters
+              </h3>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Step 1 of 2
+              </span>
+            </div>
           
           <div className="space-y-5">
             {/* Scanned Layout Active Banner */}
@@ -425,44 +585,15 @@ export function WorksheetGenerator({
               hasExistingWorksheet={!!worksheet}
             />
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Topic / Theme
-                </label>
-                <span className="text-[11px] text-slate-400">
-                  Format tailored for {activeTemplate.name}
-                </span>
-              </div>
-              <input
-                type="text"
-                placeholder={`e.g. ${activeTemplate.suggestedTopics[0] || 'Grocery shopping, Asking for directions...'}`}
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-sm transition-all"
-              />
-              
-              <div className="mt-3">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
-                  Suggested {activeTemplate.name} Themes:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {activeTemplate.suggestedTopics.map((theme) => (
-                    <button
-                      key={theme}
-                      onClick={() => handleSelectTheme(theme)}
-                      className={`text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors border ${
-                        topic === theme
-                          ? 'bg-primary-100 text-primary-800 border-primary-300 dark:bg-primary-950/70 dark:text-primary-300 dark:border-primary-700'
-                          : 'bg-slate-100 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-primary-500/20 dark:hover:text-primary-300 border-slate-200'
-                      }`}
-                    >
-                      {theme}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* Thematic Curriculum Dropdown & Quick Selector (Pollution, Accommodations, Celebrations, Travelling, Entertainments, Family, Friendships) */}
+            <CurriculumThemeSelector
+              currentTopic={topic}
+              onSelectTheme={handleApplyCurriculumTheme}
+              onCustomTopicChange={(customTopic) => {
+                setTopic(customTopic);
+                handleSelectTheme(customTopic);
+              }}
+            />
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
@@ -602,6 +733,18 @@ export function WorksheetGenerator({
                 </>
               )}
             </button>
+
+            {worksheet && (
+              <button
+                type="button"
+                onClick={focusPreviewCanvas}
+                className="w-full mt-2.5 flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-indigo-50 to-primary-50 hover:from-indigo-100 hover:to-primary-100 dark:from-indigo-950/70 dark:to-primary-950/70 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-200 dark:border-primary-800/80 transition-all shadow-xs group"
+              >
+                <Eye className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <span>View Sheet in Live Preview Canvas</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -614,11 +757,26 @@ export function WorksheetGenerator({
       </div>
 
       {/* Right Column: Live Preview & Interactive Builder */}
-      <div className="w-full lg:w-2/3 flex flex-col h-full overflow-hidden bg-slate-100/90 dark:bg-slate-950/70 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm">
+      <div 
+        ref={previewContainerRef}
+        className={`w-full lg:w-2/3 flex flex-col h-full overflow-hidden bg-slate-100/90 dark:bg-slate-950/70 border rounded-2xl shadow-sm transition-all duration-500 ${
+          mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'
+        } ${
+          highlightPreview 
+            ? 'ring-4 ring-primary-500/60 border-primary-500 shadow-xl' 
+            : 'border-slate-200/90 dark:border-slate-800'
+        }`}
+      >
         <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900/90">
           
           {/* Left: Mode Switcher & Metadata */}
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Live Preview Indicator Badge */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 font-extrabold text-[11px] tracking-wide">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              <span>LIVE PREVIEW</span>
+            </div>
+
             {/* Segmented View Switcher */}
             <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80">
               <button
@@ -702,11 +860,11 @@ export function WorksheetGenerator({
             <button 
               onClick={() => setIsPrintPreviewOpen(true)}
               disabled={!worksheet || isExportingPdf}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 dark:bg-primary-600/15 dark:hover:bg-primary-600/25 text-primary-700 dark:text-primary-300 text-xs font-semibold border border-primary-200 dark:border-primary-500/30 transition-all disabled:opacity-30 disabled:hover:bg-transparent shadow-2xs"
-              title="Open Visual A4 Print Preview with Margins & Page Breaks"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all disabled:opacity-30 disabled:hover:bg-primary-600 shadow-sm shadow-primary-600/20"
+              title="Open Dedicated Print Preview Modal"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>A4 Print Preview</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Preview</span>
             </button>
 
             {/* Client-Side Export PDF Button */}
@@ -728,15 +886,6 @@ export function WorksheetGenerator({
                 <FileDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
               )}
               <span>{isExportingPdf ? 'Exporting...' : pdfSuccess ? 'PDF Saved!' : 'Save PDF'}</span>
-            </button>
-
-            <button 
-              onClick={() => setIsDirectPrintConfirmOpen(true)}
-              disabled={!worksheet || isExportingPdf}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-              title="Confirm Print Settings & Print"
-            >
-              <Printer className="w-4 h-4" />
             </button>
              <button 
               onClick={copyToClipboard}
@@ -828,60 +977,121 @@ export function WorksheetGenerator({
                 />
               </div>
             ) : (
-              /* Standard A4 Formatted Document View */
-              <div className="w-[794px] bg-white shadow-xl shadow-slate-300/60 dark:shadow-2xl dark:shadow-black/50 border border-slate-200/80 dark:border-slate-800 rounded-sm p-12 min-h-[1123px] shrink-0 print-page text-slate-900 relative">
-                {/* Header QR Code if selected */}
-                {qrSettings.enabled && qrSettings.position === 'header' && (
-                  <div className="float-right ml-4 mb-4">
-                    <WorksheetQRCard settings={qrSettings} variant="header" topic={topic} />
+              /* Standard A4 Formatted Document View with Structured Pedagogical Styling */
+              <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-6 w-full max-w-[1100px] relative animate-fadeIn">
+                
+                {/* FLOATING QUICK CUSTOMIZER PANEL */}
+                <div className="w-full xl:w-56 shrink-0 xl:sticky xl:top-6 space-y-4 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-md">
+                  <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800/60 pb-2">
+                    <Sliders className="w-4 h-4 text-primary-500" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">Quick Layout Panel</span>
                   </div>
-                )}
 
-                {/* Visual Illustrations in A4 Document view */}
-                {includeVisuals && visuals.length > 0 && (
-                  <div className="mb-6">
-                    {visuals.map((visual, idx) => (
-                      <WorksheetVisualBlock
-                        key={visual.id || idx}
-                        visual={visual}
-                        isEditable={false}
-                      />
-                    ))}
+                  {/* Font Toggles */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 block">Worksheet Typography</label>
+                    <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg text-[10px] font-bold">
+                      <button
+                        onClick={() => setFontStyle('sans')}
+                        className={`py-1 rounded-md transition-all ${fontStyle === 'sans' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Sans
+                      </button>
+                      <button
+                        onClick={() => setFontStyle('serif')}
+                        className={`py-1 rounded-md transition-all ${fontStyle === 'serif' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Serif
+                      </button>
+                      <button
+                        onClick={() => setFontStyle('handwriting')}
+                        className={`py-1 rounded-md transition-all ${fontStyle === 'handwriting' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Script
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                <pre className={`text-slate-900 whitespace-pre-wrap ${fontConfig.className} ${fontConfig.textClass}`}>
-                  {worksheet}
-                </pre>
-
-                {/* Footer QR Code if selected */}
-                {qrSettings.enabled && qrSettings.position === 'footer' && (
-                  <div className="mt-8 pt-4 border-t border-slate-200">
-                    <WorksheetQRCard settings={qrSettings} variant="footer" topic={topic} />
+                  {/* Margin Size Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 block">Worksheet Margin Sizes</label>
+                    <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg text-[10px] font-bold">
+                      <button
+                        onClick={() => setMarginSize('compact')}
+                        className={`py-1 rounded-md transition-all ${marginSize === 'compact' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Compact
+                      </button>
+                      <button
+                        onClick={() => setMarginSize('normal')}
+                        className={`py-1 rounded-md transition-all ${marginSize === 'normal' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Normal
+                      </button>
+                      <button
+                        onClick={() => setMarginSize('spacious')}
+                        className={`py-1 rounded-md transition-all ${marginSize === 'spacious' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                      >
+                        Wide
+                      </button>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Main A4 sheet layout & toolbar */}
+                <div className="flex-1 flex flex-col items-center gap-4 w-full max-w-[794px]">
+                  {/* Document Styling Toolbar (Color themes, border styles, font family) */}
+                  <div className="w-full rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+                    <WorksheetStyleToolbar 
+                      themeColor={themeColor}
+                      onChangeThemeColor={setThemeColor}
+                      borderStyle={borderStyle}
+                      onChangeBorderStyle={setBorderStyle}
+                      fontStyle={fontStyle}
+                      onChangeFontStyle={setFontStyle}
+                    />
+                  </div>
+
+                  <div className="w-full bg-white shadow-xl shadow-slate-300/60 dark:shadow-2xl dark:shadow-black/50 border border-slate-200/80 dark:border-slate-800 rounded-sm min-h-[1123px] shrink-0 print-page text-slate-900 relative">
+                    <WorksheetDocumentRenderer 
+                      worksheetText={worksheet}
+                      topic={topic}
+                      gradeLevel={gradeLevel}
+                      fontStyle={fontStyle}
+                      themeColor={themeColor}
+                      borderStyle={borderStyle}
+                      qrSettings={qrSettings}
+                      visuals={includeVisuals ? visuals : []}
+                      marginSize={marginSize}
+                    />
+                  </div>
+                </div>
+
               </div>
             )
           ) : (
-            <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-4 h-full max-w-md text-center p-6 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xs border border-slate-200 dark:border-slate-800 rounded-2xl my-auto">
+            <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-4 h-full max-w-lg text-center p-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200 dark:border-slate-800 rounded-2xl my-auto shadow-sm">
               <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-950/60 flex items-center justify-center border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 shadow-2xs">
-                <Move className="w-8 h-8" />
+                <FileText className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">Interactive Drag & Drop Builder</h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  Configure a topic and click "Generate Worksheet", or load our sample worksheet to start dragging, reordering, and customizing questions right away.
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-primary-100 text-primary-800 dark:bg-primary-950 dark:text-primary-300 mb-2">
+                  Live Preview Canvas
+                </span>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">Your Worksheet Will Appear Here</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                  This right panel is your live A4 preview and interactive builder. Once you click <strong className="text-primary-600 dark:text-primary-400">"Generate"</strong> or choose a sample below, your full worksheet, questions, and illustrations will render right here ready to edit, reorder, and export to PDF.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2 w-full pt-2">
+              <div className="flex flex-col gap-2.5 w-full pt-2">
                 <button
                   type="button"
                   onClick={handleLoadSample}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-xs shadow-primary-500/20 transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-xs shadow-primary-500/20 transition-all"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Load {activeTemplate.name} Sample & Test Builder</span>
+                  <span>Load {activeTemplate.name} Sample to Preview Now</span>
                 </button>
 
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -917,6 +1127,7 @@ export function WorksheetGenerator({
           )}
         </div>
       </div>
+    </div>
 
       {/* Visual A4 Print Preview Modal */}
       <PrintPreviewModal
@@ -930,6 +1141,10 @@ export function WorksheetGenerator({
         onUpdateQrSettings={setQrSettings}
         fontStyle={fontStyle}
         onUpdateFontStyle={setFontStyle}
+        themeColor={themeColor}
+        onUpdateThemeColor={setThemeColor}
+        borderStyle={borderStyle}
+        onUpdateBorderStyle={setBorderStyle}
         visuals={visuals}
       />
 

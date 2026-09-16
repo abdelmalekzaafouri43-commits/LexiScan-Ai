@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, FileText, ScanLine, Bookmark, Settings, User, Compass } from 'lucide-react';
+import { LayoutDashboard, FileText, ScanLine, Bookmark, Settings, User, Compass, Sparkles } from 'lucide-react';
 import { Tab } from '../types';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ interface SidebarProps {
 export function Sidebar({ currentTab, setCurrentTab, onOpenTour }: SidebarProps) {
   const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { id: 'chat', label: 'AI Chat Studio', icon: <Sparkles className="w-5 h-5 text-primary-500 dark:text-primary-400" /> },
     { id: 'generator', label: 'Worksheet Generator', icon: <FileText className="w-5 h-5" /> },
     { id: 'scanner', label: 'External Layout Scanner', icon: <ScanLine className="w-5 h-5" /> },
     { id: 'saved', label: 'Saved Sheets', icon: <Bookmark className="w-5 h-5" /> },
